@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "2.7.4",
+    "@aws-amplify/backend": "^1.16.1",
     "@emoji-mart/data": "1.2.1",
     "@emoji-mart/react": "1.1.1",
     "@emotion/cache": "11.14.0",
