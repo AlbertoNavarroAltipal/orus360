@@ -24,6 +24,9 @@ const StepperWrapper = styled(Box)<BoxProps>(({ theme }) => {
         ...theme.typography.h4,
         marginRight: theme.spacing(2)
       },
+      '&:not(:has(.step-subtitle)) .step-number': {
+        ...theme.typography.h6
+      },
       '& .step-title': {
         ...theme.typography.body1,
         letterSpacing: 0.15,
@@ -35,12 +38,12 @@ const StepperWrapper = styled(Box)<BoxProps>(({ theme }) => {
       },
       '& .MuiStepLabel-root.Mui-disabled': {
         '& .step-number': {
-          color: theme.vars.palette.text.disabled
+          color: 'var(--mui-palette-text-disabled)'
         }
       },
       '& .Mui-error': {
         '& .MuiStepLabel-labelContainer, & .step-number, & .step-title, & .step-subtitle': {
-          color: theme.vars.palette.error.main
+          color: 'var(--mui-palette-error-main)'
         }
       }
     },
@@ -51,7 +54,7 @@ const StepperWrapper = styled(Box)<BoxProps>(({ theme }) => {
       },
       '&.Mui-active, &.Mui-completed': {
         '& .MuiStepConnector-line': {
-          borderColor: theme.vars.palette.primary.main
+          borderColor: 'var(--mui-palette-primary-main)'
         }
       },
       '&.Mui-disabled .MuiStepConnector-line': {
@@ -76,13 +79,13 @@ const StepperWrapper = styled(Box)<BoxProps>(({ theme }) => {
         '& .MuiStepContent-root': {
           borderInlineStartWidth: 3,
           marginLeft: theme.spacing(2.25),
-          borderColor: theme.vars.palette.primary.main
+          borderColor: 'var(--mui-palette-primary-main)'
         },
         '& .button-wrapper': {
           marginTop: theme.spacing(4)
         },
         '&.active + .MuiStepConnector-root .MuiStepConnector-line': {
-          borderColor: theme.vars.palette.primary.main
+          borderColor: 'var(--mui-palette-primary-main)'
         }
       },
       '& .MuiStepConnector-root': {
@@ -95,6 +98,6 @@ const StepperWrapper = styled(Box)<BoxProps>(({ theme }) => {
       }
     }
   }
-})
+}) as typeof Box
 
 export default StepperWrapper

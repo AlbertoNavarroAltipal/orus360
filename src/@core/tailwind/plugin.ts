@@ -1,6 +1,6 @@
 import plugin from 'tailwindcss/plugin'
 
-module.exports = plugin(function () {}, {
+export default plugin(function () {}, {
   theme: {
     borderColor: ({ theme }) => ({
       ...theme('colors'),
@@ -38,8 +38,11 @@ module.exports = plugin(function () {}, {
       colors: {
         primary: 'var(--primary-color)',
         primaryLight: 'var(--mui-palette-primary-lightOpacity)',
+        primaryLighter: 'var(--mui-palette-primary-lighterOpacity)',
         secondary: 'var(--mui-palette-secondary-main)',
         error: 'var(--mui-palette-error-main)',
+        errorLight: 'var(--mui-palette-error-lightOpacity)',
+        errorLighter: 'var(--mui-palette-error-lighterOpacity)',
         warning: 'var(--mui-palette-warning-main)',
         info: 'var(--mui-palette-info-main)',
         success: 'var(--mui-palette-success-main)',
@@ -54,10 +57,11 @@ module.exports = plugin(function () {}, {
         backgroundDefault: 'var(--mui-palette-background-default)',
         track: 'var(--mui-palette-customColors-trackBg)',
         backdrop: 'var(--backdrop-color)',
-        facebook: '#497ce2',
-        twitter: '#1da1f2',
+        facebook: '#4267B2',
+        twitter: '#1DA1F2',
+        linkedin: '#007BB6',
         github: '#272727',
-        googlePlus: '#db4437'
+        googlePlus: '#DB4437'
       },
       zIndex: {
         header: 'var(--header-z-index)',

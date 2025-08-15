@@ -4,12 +4,11 @@ import type { Theme } from '@mui/material/styles'
 
 // Type Imports
 import type { MenuItemStyles } from '@menu/types'
-import type { Settings } from '@core/contexts/settingsContext'
 
 // Util Imports
 import { menuClasses } from '@menu/utils/menuClasses'
 
-const menuItemStyles = (settings: Settings, theme: Theme): MenuItemStyles => ({
+const menuItemStyles = (theme: Theme, iconClass: string): MenuItemStyles => ({
   root: ({ level }) => ({
     ...(level === 0 && {
       borderRadius: 50
@@ -20,6 +19,7 @@ const menuItemStyles = (settings: Settings, theme: Theme): MenuItemStyles => ({
     ...(level === 0
       ? {
           [`& .${menuClasses.button}.${menuClasses.active}`]: {
+            color: 'var(--mui-palette-primary-contrastText) !important',
             background:
               theme.direction === 'ltr'
                 ? `linear-gradient(270deg, var(--mui-palette-primary-main), ${lighten(
@@ -67,9 +67,12 @@ const menuItemStyles = (settings: Settings, theme: Theme): MenuItemStyles => ({
     '& > i, & > svg': {
       fontSize: 'inherit'
     },
-    '& .ri-circle-line': {
+    [`& .${iconClass}`]: {
       fontSize: '0.75rem',
       color: 'var(--mui-palette-text-secondary)',
+      ...(level === 1 && {
+        marginInline: theme.spacing(1.25)
+      }),
       [`.${menuClasses.active} &`]: {
         color: 'var(--mui-palette-primary-main)'
       }
@@ -93,14 +96,12 @@ const menuItemStyles = (settings: Settings, theme: Theme): MenuItemStyles => ({
   },
   subMenuContent: {
     backgroundColor: 'var(--mui-palette-background-paper)',
-    ...(settings.skin === 'bordered'
-      ? {
-          boxShadow: 'none',
-          border: '1px solid var(--mui-palette-divider)'
-        }
-      : {
-          boxShadow: 'var(--mui-customShadows-lg)'
-        }),
+    boxShadow: 'var(--mui-customShadows-lg)',
+    '[data-skin="bordered"] ~ [data-floating-ui-portal] &': {
+      boxShadow: 'none',
+      border: '1px solid var(--mui-palette-divider)'
+    },
+
     '& > ul, & > div > ul': {
       paddingBlock: theme.spacing(2)
     }

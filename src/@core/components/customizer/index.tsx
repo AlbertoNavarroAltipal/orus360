@@ -14,7 +14,7 @@ import Paper from '@mui/material/Paper'
 import Popper from '@mui/material/Popper'
 import { useTheme } from '@mui/material/styles'
 import ClickAwayListener from '@mui/material/ClickAwayListener'
-import Checkbox from '@mui/material/Checkbox'
+import Switch from '@mui/material/Switch'
 import type { Breakpoint } from '@mui/material/styles'
 
 // Third-party Imports
@@ -29,8 +29,6 @@ import type { Direction } from '@core/types'
 import type { PrimaryColorConfig } from '@configs/primaryColorConfig'
 
 // Icon Imports
-import Cog from '@core/svg/Cog'
-import EyeDropper from '@core/svg/EyeDropper'
 import SkinDefault from '@core/svg/SkinDefault'
 import SkinBordered from '@core/svg/SkinBordered'
 import LayoutVertical from '@core/svg/LayoutVertical'
@@ -84,12 +82,12 @@ const DebouncedColorPicker = (props: DebouncedColorPickerProps) => {
   return (
     <>
       <HexColorPicker
-        color={!isColorFromPrimaryConfig ? settings.primaryColor ?? primaryColorConfig[0].main : '#eee'}
+        color={!isColorFromPrimaryConfig ? (settings.primaryColor ?? primaryColorConfig[0].main) : '#eee'}
         onChange={setDebouncedColor}
       />
       <HexColorInput
         className={styles.colorInput}
-        color={!isColorFromPrimaryConfig ? settings.primaryColor ?? primaryColorConfig[0].main : '#eee'}
+        color={!isColorFromPrimaryConfig ? (settings.primaryColor ?? primaryColorConfig[0].main) : '#eee'}
         onChange={setDebouncedColor}
         prefixed
         placeholder='Type a color'
@@ -172,31 +170,25 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
   return (
     !breakpointReached && (
       <div
-        className={classnames('customizer bs-full flex flex-col', styles.customizer, {
+        className={classnames('customizer', styles.customizer, {
           [styles.show]: isOpen,
           [styles.smallScreen]: isMobileScreen
         })}
       >
-        <div
-          className={classnames('customizer-toggler flex items-center justify-center cursor-pointer', styles.toggler)}
-          onClick={handleToggle}
-        >
-          <Cog />
+        <div className={styles.toggler} onClick={handleToggle}>
+          <i className='ri-settings-5-line text-[22px]' />
         </div>
-        <div className={classnames('customizer-header flex items-center justify-between', styles.header)}>
+        <div className={styles.header}>
           <div className='flex flex-col'>
             <h6 className={styles.customizerTitle}>Theme Customizer</h6>
             <p className={styles.customizerSubtitle}>Customize & Preview in Real Time</p>
           </div>
           <div className='flex gap-4'>
             <div onClick={resetSettings} className='relative flex cursor-pointer'>
-              <i className={classnames('ri-refresh-line', styles.actionActiveColor)} />
+              <i className='ri-refresh-line text-actionActive' />
               <div className={classnames(styles.dotStyles, { [styles.show]: isSettingsChanged })} />
             </div>
-            <i
-              className={classnames('ri-close-line cursor-pointer', styles.actionActiveColor)}
-              onClick={handleToggle}
-            />
+            <i className='ri-close-line text-actionActive cursor-pointer' onClick={handleToggle} />
           </div>
         </div>
         <ScrollWrapper
@@ -204,15 +196,9 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
             ? { className: 'bs-full overflow-y-auto overflow-x-hidden' }
             : { options: { wheelPropagation: false, suppressScrollX: true } })}
         >
-          <div className={classnames('customizer-body flex flex-col', styles.customizerBody)}>
-            <div className='theming-section flex flex-col gap-6'>
-              <Chip
-                label='Theming'
-                size='small'
-                color='primary'
-                variant='tonal'
-                className={classnames('self-start', styles.chip)}
-              />
+          <div className={styles.customizerBody}>
+            <div className='flex flex-col gap-6'>
+              <Chip label='Theming' size='small' color='primary' variant='tonal' className='self-start rounded-sm' />
               <div className='flex flex-col gap-2.5'>
                 <p className='font-medium'>Primary Color</p>
                 <div className='flex items-center justify-between'>
@@ -245,7 +231,7 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
                           : 'var(--mui-palette-primary-contrastText)'
                       }}
                     >
-                      <EyeDropper fontSize='1.25rem' />
+                      <i className='ri-palette-line text-xl' />
                     </div>
                   </div>
                   <Popper
@@ -352,7 +338,7 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
                   <label className='font-medium cursor-pointer' htmlFor='customizer-semi-dark'>
                     Semi Dark
                   </label>
-                  <Checkbox
+                  <Switch
                     id='customizer-semi-dark'
                     checked={settings.semiDark === true}
                     onChange={() => handleChange('semiDark', !settings.semiDark)}
@@ -361,14 +347,8 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
               )}
             </div>
             <hr className={styles.hr} />
-            <div className='layout-section flex flex-col gap-6'>
-              <Chip
-                label='Layout'
-                size='small'
-                color='primary'
-                variant='tonal'
-                className={classnames('self-start', styles.chip)}
-              />
+            <div className='flex flex-col gap-6'>
+              <Chip label='Layout' size='small' color='primary' variant='tonal' className='self-start rounded-sm' />
               <div className='flex flex-col gap-2.5'>
                 <p className='font-medium'>Layouts</p>
                 <div className='flex items-center justify-between'>

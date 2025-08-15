@@ -84,8 +84,7 @@ const colorSchemes = (skin: Skin): Theme['colorSchemes'] => {
         dividerChannel: 'var(--mui-mainColorChannels-light)',
         background: {
           default: skin === 'bordered' ? '#FFFFFF' : '#F4F5FA',
-          paper: '#FFFFFF',
-          paperChannel: '255 255 255'
+          paper: '#FFFFFF'
         },
         action: {
           active: `rgb(var(--mui-mainColorChannels-light) / 0.6)`,
@@ -244,8 +243,7 @@ const colorSchemes = (skin: Skin): Theme['colorSchemes'] => {
         dividerChannel: 'var(--mui-mainColorChannels-dark)',
         background: {
           default: skin === 'bordered' ? '#312D4B' : '#28243D',
-          paper: '#312D4B',
-          paperChannel: '49 45 75'
+          paper: '#312D4B'
         },
         action: {
           active: `rgb(var(--mui-mainColorChannels-dark) / 0.6)`,

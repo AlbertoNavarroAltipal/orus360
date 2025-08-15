@@ -61,17 +61,7 @@ const card = (skin: Skin): Theme['components'] => {
           '& + .MuiCollapse-root .MuiCardHeader-root:first-child, & + .MuiCollapse-root .MuiCardContent-root:first-child, & + .MuiCollapse-root .MuiCardActions-root:first-child':
             {
               paddingBlockStart: 0
-            },
-          '& > .MuiTabPanel-root': {
-            paddingInline: 0,
-            paddingBlockEnd: 0,
-            '&:first-of-type': {
-              paddingBlockStart: 0,
-              '& + .MuiTabPanel-root': {
-                paddingBlockStart: 0
-              }
             }
-          }
         })
       }
     },

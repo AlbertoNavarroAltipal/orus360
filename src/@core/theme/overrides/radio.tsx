@@ -50,6 +50,7 @@ const radio: Theme['components'] = {
           filter: 'drop-shadow(var(--mui-customShadows-xs))'
         },
         '&.Mui-disabled': {
+          opacity: 0.45,
           '&:not(.Mui-checked)': {
             color: 'var(--mui-palette-text-secondary)'
           },

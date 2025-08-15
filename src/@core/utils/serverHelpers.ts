@@ -1,63 +1,51 @@
-'use server'
-
 // Next Imports
-import { cookies, headers } from 'next/headers'
+import { cookies } from 'next/headers'
+
+// Third-party Imports
+import 'server-only'
 
 // Type Imports
 import type { Settings } from '@core/contexts/settingsContext'
-import type { DemoName, SystemMode } from '@core/types'
+import type { SystemMode } from '@core/types'
 
 // Config Imports
 import themeConfig from '@configs/themeConfig'
-import demoConfigs from '@configs/demoConfigs'
 
-export const getDemoName = (): DemoName => {
-  const headersList = headers()
+export const getSettingsFromCookie = async (): Promise<Settings> => {
+  const cookieStore = await cookies()
 
-  return headersList.get('X-server-header') as DemoName | null
-}
-
-export const getSettingsFromCookie = (): Settings => {
-  const cookieStore = cookies()
-
-  const demoName = getDemoName()
-
-  const cookieName = demoName
-    ? themeConfig.settingsCookieName.replace('demo-1', demoName)
-    : themeConfig.settingsCookieName
+  const cookieName = themeConfig.settingsCookieName
 
   return JSON.parse(cookieStore.get(cookieName)?.value || '{}')
 }
 
-export const getMode = () => {
-  const settingsCookie = getSettingsFromCookie()
-
-  const demoName = getDemoName()
+export const getMode = async () => {
+  const settingsCookie = await getSettingsFromCookie()
 
   // Get mode from cookie or fallback to theme config
-  const _mode = settingsCookie.mode || (demoName && demoConfigs[demoName].mode) || themeConfig.mode
+  const _mode = settingsCookie.mode || themeConfig.mode
 
   return _mode
 }
 
-export const getSystemMode = (): SystemMode => {
-  const cookieStore = cookies()
-  const mode = getMode()
+export const getSystemMode = async (): Promise<SystemMode> => {
+  const cookieStore = await cookies()
+  const mode = await getMode()
 
   const colorPrefCookie = (cookieStore.get('colorPref')?.value || 'light') as SystemMode
 
   return (mode === 'system' ? colorPrefCookie : mode) || 'light'
 }
 
-export const getServerMode = () => {
-  const mode = getMode()
-  const systemMode = getSystemMode()
+export const getServerMode = async () => {
+  const mode = await getMode()
+  const systemMode = await getSystemMode()
 
   return mode === 'system' ? systemMode : mode
 }
 
-export const getSkin = () => {
-  const settingsCookie = getSettingsFromCookie()
+export const getSkin = async () => {
+  const settingsCookie = await getSettingsFromCookie()
 
   return settingsCookie.skin || 'default'
 }

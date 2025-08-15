@@ -1,7 +1,5 @@
-'use client'
-
 // MUI Imports
-import Grid from '@mui/material/Grid'
+import Grid from '@mui/material/Grid2'
 import Radio from '@mui/material/Radio'
 import Checkbox from '@mui/material/Checkbox'
 import Typography from '@mui/material/Typography'
@@ -27,6 +25,7 @@ const Root = styled('div', {
   padding: theme.spacing(4),
   borderRadius: 'var(--mui-shape-borderRadius)',
   border: '1px solid var(--mui-palette-customColors-inputBorder)',
+  color: 'var(--mui-palette-text-primary)',
   transition: theme.transitions.create(['border-color'], { duration: theme.transitions.duration.shorter }),
 
   '&:hover': {
@@ -38,7 +37,7 @@ const Root = styled('div', {
   '&.active': {
     borderColor: 'var(--mui-palette-primary-main)',
     '& > svg, & > i': {
-      color: 'var(--mui-palette-primary-main)'
+      color: 'var(--mui-palette-primary-main) !important'
     }
   },
   '&.radio-only .MuiRadio-root': {
@@ -53,16 +52,17 @@ const Title = styled(Typography, {
   name: 'MuiCustomInputVertical',
   slot: 'title'
 })(({ theme }) => ({
-  letterSpacing: '0.15px',
-  fontWeight: theme.typography.fontWeightMedium
+  fontWeight: theme.typography.fontWeightMedium,
+  color: 'var(--mui-palette-text-primary) !important'
 }))
 
 const Content = styled(Typography, {
   name: 'MuiCustomInputVertical',
   slot: 'content'
-})({
+})(({ theme }) => ({
+  ...theme.typography.body2,
   textAlign: 'center'
-})
+}))
 
 const RadioInput = styled(Radio, {
   name: 'MuiCustomInputVertical',
@@ -87,7 +87,7 @@ const CustomInputVertical = (props: CustomInputVerticalProps) => {
 
   const renderComponent = () => {
     return (
-      <Grid item {...gridProps}>
+      <Grid {...gridProps}>
         <Root
           onClick={() => handleChange(value)}
           className={classnames({
@@ -97,8 +97,8 @@ const CustomInputVertical = (props: CustomInputVerticalProps) => {
           })}
         >
           {asset || null}
-          {title ? typeof title === 'string' ? <Title color='text.primary'>{title}</Title> : title : null}
-          {content ? typeof content === 'string' ? <Content variant='body2'>{content}</Content> : content : null}
+          {title ? typeof title === 'string' ? <Title>{title}</Title> : title : null}
+          {content ? typeof content === 'string' ? <Content>{content}</Content> : content : null}
           {type === 'radio' ? (
             <RadioInput name={name} color={color} value={value} onChange={handleChange} checked={selected === value} />
           ) : (

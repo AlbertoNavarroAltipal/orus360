@@ -5,12 +5,11 @@ import type { Theme } from '@mui/material/styles'
 // Type Imports
 import type { VerticalNavState } from '@menu/contexts/verticalNavContext'
 import type { MenuItemStyles } from '@menu/types'
-import type { Settings } from '@core/contexts/settingsContext'
 
 // Util Imports
 import { menuClasses } from '@menu/utils/menuClasses'
 
-const menuItemStyles = (verticalNavOptions: VerticalNavState, theme: Theme, settings: Settings): MenuItemStyles => {
+const menuItemStyles = (verticalNavOptions: VerticalNavState, theme: Theme): MenuItemStyles => {
   // Vars
   const { isCollapsed, isHovered, collapsedWidth, isPopoutWhenCollapsed, transitionDuration } = verticalNavOptions
 
@@ -32,7 +31,10 @@ const menuItemStyles = (verticalNavOptions: VerticalNavState, theme: Theme, sett
           backgroundColor: 'var(--mui-palette-action-selected) !important'
         },
       [`&.${menuClasses.disabled} > .${menuClasses.button}`]: {
-        color: 'var(--mui-palette-text-disabled)'
+        color: 'var(--mui-palette-text-disabled)',
+        '& *': {
+          color: 'inherit'
+        }
       },
       [`&:not(.${menuClasses.subMenuRoot}) > .${menuClasses.button}.${menuClasses.active}`]: {
         ...(popoutCollapsed && level > 0
@@ -44,6 +46,7 @@ const menuItemStyles = (verticalNavOptions: VerticalNavState, theme: Theme, sett
               }
             }
           : {
+              color: 'var(--mui-palette-primary-contrastText)',
               background:
                 theme.direction === 'ltr'
                   ? `linear-gradient(270deg, var(--mui-palette-primary-main), ${lighten(
@@ -55,7 +58,7 @@ const menuItemStyles = (verticalNavOptions: VerticalNavState, theme: Theme, sett
                       0.5
                     )}, var(--mui-palette-primary-main) 100%)`,
               [`& .${menuClasses.icon}`]: {
-                color: 'var(--mui-palette-common-white)'
+                color: 'inherit'
               }
             })
       }
@@ -143,14 +146,11 @@ const menuItemStyles = (verticalNavOptions: VerticalNavState, theme: Theme, sett
       ...(popoutCollapsed &&
         level === 0 && {
           paddingBlock: theme.spacing(2),
-          ...(settings.skin === 'bordered'
-            ? {
-                boxShadow: 'none',
-                border: '1px solid var(--mui-palette-divider)'
-              }
-            : {
-                boxShadow: 'var(--mui-customShadows-lg)'
-              }),
+          boxShadow: 'var(--mui-customShadows-lg)',
+          '[data-skin="bordered"] ~ [data-floating-ui-portal] &': {
+            boxShadow: 'none',
+            border: '1px solid var(--mui-palette-divider)'
+          },
           [`& .${menuClasses.button}`]: {
             paddingInline: theme.spacing(4)
           }

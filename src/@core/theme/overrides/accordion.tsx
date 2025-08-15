@@ -78,10 +78,7 @@ const accordion = (skin: Skin): Theme['components'] => ({
   MuiAccordionDetails: {
     styleOverrides: {
       root: ({ theme }) => ({
-        padding: theme.spacing(5),
-        '&:first-of-type': {
-          paddingTop: theme.spacing(0)
-        },
+        padding: theme.spacing(0, 5, 5),
         '& .MuiTypography-root': {
           color: 'var(--mui-palette-text-secondary)'
         }

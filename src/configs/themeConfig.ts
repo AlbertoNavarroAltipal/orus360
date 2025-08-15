@@ -38,6 +38,7 @@ type Footer = {
 
 export type Config = {
   templateName: string
+  homePageUrl: string
   settingsCookieName: string
   mode: Mode
   skin: Skin
@@ -54,6 +55,7 @@ export type Config = {
 
 const themeConfig: Config = {
   templateName: 'Materio',
+  homePageUrl: '/dashboards/crm',
   settingsCookieName: 'materio-mui-next-demo-1',
   mode: 'system', // 'system', 'light', 'dark'
   skin: 'default', // 'default', 'bordered'

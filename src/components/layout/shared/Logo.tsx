@@ -1,8 +1,8 @@
+'use client'
+
 // React Imports
 import { useEffect, useRef } from 'react'
-
-// Next Imports
-import Link from 'next/link'
+import type { CSSProperties } from 'react'
 
 // Third-party Imports
 import styled from '@emotion/styled'
@@ -24,9 +24,12 @@ type LogoTextProps = {
   isHovered?: VerticalNavContextProps['isHovered']
   isCollapsed?: VerticalNavContextProps['isCollapsed']
   transitionDuration?: VerticalNavContextProps['transitionDuration']
+  isBreakpointReached?: VerticalNavContextProps['isBreakpointReached']
+  color?: CSSProperties['color']
 }
 
 const LogoText = styled.span<LogoTextProps>`
+  color: ${({ color }) => color ?? 'var(--mui-palette-text-primary)'};
   font-size: 1.25rem;
   line-height: 1.2;
   font-weight: 600;
@@ -35,50 +38,52 @@ const LogoText = styled.span<LogoTextProps>`
   transition: ${({ transitionDuration }) =>
     `margin-inline-start ${transitionDuration}ms ease-in-out, opacity ${transitionDuration}ms ease-in-out`};
 
-  ${({ isHovered, isCollapsed }) =>
-    isCollapsed && !isHovered ? 'opacity: 0; margin-inline-start: 0;' : 'opacity: 1; margin-inline-start: 10px;'}
+  ${({ isHovered, isCollapsed, isBreakpointReached }) =>
+    !isBreakpointReached && isCollapsed && !isHovered
+      ? 'opacity: 0; margin-inline-start: 0;'
+      : 'opacity: 1; margin-inline-start: 10px;'}
 `
 
-const Logo = () => {
+const Logo = ({ color }: { color?: CSSProperties['color'] }) => {
   // Refs
   const logoTextRef = useRef<HTMLSpanElement>(null)
 
   // Hooks
-  const { isHovered, isCollapsed, transitionDuration } = useVerticalNav()
+  const { isHovered, transitionDuration, isBreakpointReached } = useVerticalNav()
   const { settings } = useSettings()
 
   // Vars
   const { layout } = settings
 
   useEffect(() => {
-    if (layout === 'horizontal' || !isCollapsed) {
+    if (layout !== 'collapsed') {
       return
     }
 
     if (logoTextRef && logoTextRef.current) {
-      if (isCollapsed && !isHovered) {
+      if (!isBreakpointReached && layout === 'collapsed' && !isHovered) {
         logoTextRef.current?.classList.add('hidden')
       } else {
         logoTextRef.current.classList.remove('hidden')
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHovered, isCollapsed])
+  }, [isHovered, layout, isBreakpointReached])
 
-  // You may return any JSX here to display a logo in the sidebar header
-  // return <Img src='/next.svg' width={100} height={25} alt='logo' /> // for example
   return (
-    <Link href='/' className='flex items-center min-bs-[24px]'>
+    <div className='flex items-center min-bs-[24px]'>
       <MaterioLogo className='text-[22px] text-primary' />
       <LogoText
+        color={color}
         ref={logoTextRef}
         isHovered={isHovered}
-        isCollapsed={isCollapsed}
+        isCollapsed={layout === 'collapsed'}
         transitionDuration={transitionDuration}
+        isBreakpointReached={isBreakpointReached}
       >
         {themeConfig.templateName}
       </LogoText>
-    </Link>
+    </div>
   )
 }
 

@@ -89,12 +89,6 @@ declare module '@mui/material/styles' {
 
   // Palette
   interface Palette {
-    background: {
-      default: string
-      paper: string
-      defaultChannel: string
-      paperChannel: string
-    }
     customColors: {
       bodyBg: string
       chatBg: string
@@ -106,12 +100,6 @@ declare module '@mui/material/styles' {
     }
   }
   interface PaletteOptions {
-    background?: {
-      default?: string
-      paper?: string
-      defaultChannel?: string
-      paperChannel?: string
-    }
     customColors?: {
       bodyBg?: string
       chatBg?: string
@@ -122,10 +110,6 @@ declare module '@mui/material/styles' {
       trackBg?: string
     }
   }
-  interface PalettePaperChannel {
-    paperChannel: string
-  }
-  interface TypeBackground extends PalettePaperChannel {}
 
   // Components
   interface ComponentNameToClassKey {

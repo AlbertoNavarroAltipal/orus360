@@ -40,8 +40,17 @@ const tabs: Theme['components'] = {
                     })
               }),
           '& .MuiTabScrollButton-root': {
-            borderRadius: theme.shape.borderRadius
+            borderRadius: 'var(--mui-shape-borderRadius)'
           }
+        },
+        '& ~ .MuiTabPanel-root': {
+          ...(ownerState.orientation === 'horizontal'
+            ? {
+                paddingBlockStart: theme.spacing(5)
+              }
+            : {
+                paddingInlineStart: theme.spacing(5)
+              })
         }
       }),
       vertical: {
@@ -59,7 +68,7 @@ const tabs: Theme['components'] = {
         padding: theme.spacing(2, 5.5),
         minBlockSize: 38,
         color: 'var(--mui-palette-text-primary)',
-        '& > .MuiTab-iconWrapper': {
+        '& > .MuiTab-icon': {
           fontSize: '1.125rem',
           ...(ownerState.iconPosition === 'start' && {
             marginInlineEnd: theme.spacing(1.5)
@@ -73,9 +82,9 @@ const tabs: Theme['components'] = {
   },
   MuiTabPanel: {
     styleOverrides: {
-      root: ({ theme }) => ({
-        padding: theme.spacing(5)
-      })
+      root: {
+        padding: 0
+      }
     }
   }
 }

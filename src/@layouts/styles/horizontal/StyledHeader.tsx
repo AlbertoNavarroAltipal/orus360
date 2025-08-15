@@ -17,11 +17,9 @@ type StyledHeaderProps = {
 }
 
 const StyledHeader = styled.header<StyledHeaderProps>`
-  ${({ theme }) => `
-    box-shadow: 0 4px 8px -4px rgb(var(--mui-mainColorChannels-${theme.palette.mode}Shadow) / 0.42);
-  `}
+  box-shadow: 0 4px 8px -4px rgb(var(--mui-mainColorChannels-shadow) / 0.42);
 
-  [data-skin="bordered"] & {
+  [data-skin='bordered'] & {
     box-shadow: none;
     border-block-end: 1px solid var(--border-color);
   }
@@ -32,7 +30,7 @@ const StyledHeader = styled.header<StyledHeaderProps>`
 
   &.${horizontalLayoutClasses.headerBlur} {
     backdrop-filter: blur(9px);
-    background-color: rgb(var(--background-color-rgb) / 0.85);
+    background-color: rgb(var(--mui-palette-background-paperChannel) / 0.85);
   }
 
   &.${horizontalLayoutClasses.headerFixed} {

@@ -3,11 +3,17 @@
 // React Imports
 import { useEffect, useRef } from 'react'
 
+// Next Imports
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+
 // MUI Imports
 import { styled, useColorScheme, useTheme } from '@mui/material/styles'
 
 // Type Imports
-import type { Mode, Skin, SystemMode } from '@core/types'
+import type { getDictionary } from '@/utils/getDictionary'
+import type { Mode } from '@core/types'
+import type { Locale } from '@configs/i18n'
 
 // Component Imports
 import VerticalNav, { NavHeader, NavCollapseIcons } from '@menu/vertical-menu'
@@ -18,13 +24,15 @@ import Logo from '@components/layout/shared/Logo'
 import useVerticalNav from '@menu/hooks/useVerticalNav'
 import { useSettings } from '@core/hooks/useSettings'
 
+// Util Imports
+import { getLocalizedUrl } from '@/utils/i18n'
+
 // Style Imports
 import navigationCustomStyles from '@core/styles/vertical/navigationCustomStyles'
 
 type Props = {
+  dictionary: Awaited<ReturnType<typeof getDictionary>>
   mode: Mode
-  systemMode: SystemMode
-  skin: Skin
 }
 
 const StyledBoxForShadow = styled('div')(({ theme }) => ({
@@ -47,11 +55,12 @@ const StyledBoxForShadow = styled('div')(({ theme }) => ({
 
 const Navigation = (props: Props) => {
   // Props
-  const { mode, systemMode, skin } = props
+  const { dictionary, mode } = props
 
   // Hooks
   const verticalNavOptions = useVerticalNav()
   const { updateSettings, settings } = useSettings()
+  const { lang: locale } = useParams()
   const { mode: muiMode, systemMode: muiSystemMode } = useColorScheme()
   const theme = useTheme()
 
@@ -60,16 +69,11 @@ const Navigation = (props: Props) => {
 
   // Vars
   const { isCollapsed, isHovered, collapseVerticalNav, isBreakpointReached } = verticalNavOptions
-  const isServer = typeof window === 'undefined'
   const isSemiDark = settings.semiDark
-  let isDark, isSkinBordered
 
-  if (isServer) {
-    isDark = mode === 'system' ? systemMode === 'dark' : mode === 'dark'
-    isSkinBordered = skin === 'bordered'
-  } else {
-    isDark = muiMode === 'system' ? muiSystemMode === 'dark' : muiMode === 'dark'
-  }
+  const currentMode = muiMode === 'system' ? muiSystemMode : muiMode || mode
+
+  const isDark = currentMode === 'dark'
 
   const scrollMenu = (container: any, isPerfectScrollbar: boolean) => {
     container = isBreakpointReached || !isPerfectScrollbar ? container.target : container
@@ -101,18 +105,20 @@ const Navigation = (props: Props) => {
     <VerticalNav
       customStyles={navigationCustomStyles(verticalNavOptions, theme)}
       collapsedWidth={68}
-      backgroundColor={isSkinBordered ? 'var(--mui-palette-background-paper)' : 'var(--mui-palette-background-default)'}
+      backgroundColor='var(--mui-palette-background-default)'
       // eslint-disable-next-line lines-around-comment
-      // The following condition adds the data-mui-color-scheme='dark' attribute to the VerticalNav component
+      // The following condition adds the data-dark attribute to the VerticalNav component
       // when semiDark is enabled and the mode or systemMode is light
       {...(isSemiDark &&
         !isDark && {
-          'data-mui-color-scheme': 'dark'
+          'data-dark': ''
         })}
     >
       {/* Nav Header including Logo & nav toggle icons  */}
       <NavHeader>
-        <Logo />
+        <Link href={getLocalizedUrl('/', locale as Locale)}>
+          <Logo />
+        </Link>
         {!(isCollapsed && !isHovered) && (
           <NavCollapseIcons
             lockedIcon={<i className='ri-radio-button-line text-xl' />}
@@ -124,7 +130,7 @@ const Navigation = (props: Props) => {
         )}
       </NavHeader>
       <StyledBoxForShadow ref={shadowRef} />
-      <VerticalMenu scrollMenu={scrollMenu} />
+      <VerticalMenu dictionary={dictionary} scrollMenu={scrollMenu} />
     </VerticalNav>
   )
 }

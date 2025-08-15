@@ -1,7 +1,5 @@
-'use client'
-
 // MUI Imports
-import Grid from '@mui/material/Grid'
+import Grid from '@mui/material/Grid2'
 import Radio from '@mui/material/Radio'
 import Checkbox from '@mui/material/Checkbox'
 import Typography from '@mui/material/Typography'
@@ -26,6 +24,7 @@ const Root = styled('div', {
   alignItems: 'flex-start',
   border: '1px solid var(--mui-palette-customColors-inputBorder)',
   padding: theme.spacing(4),
+  color: 'var(--mui-palette-text-primary)',
   transition: theme.transitions.create(['border-color'], {
     duration: theme.transitions.duration.shorter
   }),
@@ -45,21 +44,24 @@ const Title = styled(Typography, {
   name: 'MuiCustomInputHorizontal',
   slot: 'title'
 })(({ theme }) => ({
-  letterSpacing: '0.15px',
-  fontWeight: theme.typography.fontWeightMedium
+  fontWeight: theme.typography.fontWeightMedium,
+  color: 'var(--mui-palette-text-primary) !important'
 }))
 
 const Meta = styled(Typography, {
   name: 'MuiCustomInputHorizontal',
   slot: 'meta'
-})({
-  color: 'var(--mui-palette-text-disabled)'
-})
+})(({ theme }) => ({
+  ...theme.typography.body2,
+  color: 'var(--mui-palette-text-disabled) !important'
+}))
 
 const Content = styled(Typography, {
   name: 'MuiCustomInputHorizontal',
   slot: 'content'
-})({})
+})(({ theme }) => ({
+  ...theme.typography.body2
+}))
 
 const RadioInput = styled(Radio, {
   name: 'MuiCustomInputHorizontal',
@@ -89,49 +91,37 @@ const CustomInputHorizontal = (props: CustomInputHorizontalProps) => {
       return (
         <div className='flex flex-col bs-full is-full gap-1.5'>
           <div className='flex items-start justify-between is-full mbs-1.5 gap-1.5'>
-            {typeof title === 'string' ? <Title color='text.primary'>{title}</Title> : title}
-            {typeof meta === 'string' ? <Meta variant='body2'>{meta}</Meta> : meta}
+            {typeof title === 'string' ? <Title>{title}</Title> : title}
+            {typeof meta === 'string' ? <Meta>{meta}</Meta> : meta}
           </div>
-          {typeof content === 'string' ? <Content variant='body2'>{content}</Content> : content}
+          {typeof content === 'string' ? <Content>{content}</Content> : content}
         </div>
       )
     } else if (meta && title && !content) {
       return (
         <div className='flex items-start justify-between is-full mbs-1.5 gap-1.5'>
-          {typeof title === 'string' ? <Title color='text.primary'>{title}</Title> : title}
-          {typeof meta === 'string' ? <Meta variant='body2'>{meta}</Meta> : meta}
+          {typeof title === 'string' ? <Title>{title}</Title> : title}
+          {typeof meta === 'string' ? <Meta>{meta}</Meta> : meta}
         </div>
       )
     } else if (!meta && title && content) {
       return (
-        <div className='flex flex-col bs-full gap-1 mbs-1.5'>
-          {typeof title === 'string' ? <Title color='text.primary'>{title}</Title> : title}
-          {typeof content === 'string' ? <Content variant='body2'>{content}</Content> : content}
+        <div className='flex flex-col bs-full gap-1.5 mbs-1.5'>
+          {typeof title === 'string' ? <Title>{title}</Title> : title}
+          {typeof content === 'string' ? <Content>{content}</Content> : content}
         </div>
       )
     } else if (!meta && !title && content) {
-      return typeof content === 'string' ? (
-        <Content variant='body2' className='mbs-1.5'>
-          {content}
-        </Content>
-      ) : (
-        content
-      )
+      return typeof content === 'string' ? <Content className='mbs-1.5'>{content}</Content> : content
     } else if (!meta && title && !content) {
-      return typeof title === 'string' ? (
-        <Title color='text.primary' className='mbs-1.5'>
-          {title}
-        </Title>
-      ) : (
-        title
-      )
+      return typeof title === 'string' ? <Title className='mbs-1.5'>{title}</Title> : title
     } else {
       return null
     }
   }
 
   return data ? (
-    <Grid item {...gridProps}>
+    <Grid {...gridProps}>
       <Root
         onClick={() => handleChange(value)}
         className={classnames({
