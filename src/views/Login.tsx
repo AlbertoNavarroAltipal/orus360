@@ -108,25 +108,31 @@ const Login = ({ mode }: { mode: Mode }) => {
       email: data.email,
       password: data.password,
       redirect: false
+
       // callbackUrl: "/"  // opcional; si lo pones, relativo
     })
 
     if (res?.ok && !res.error) {
       const redirectURL = searchParams.get('redirectTo') ?? '/'
+
       router.replace(getLocalizedUrl(redirectURL, locale as Locale))
-      return
+      
+return
     }
 
     // Manejo robusto de errores
     let message = 'Invalid credentials'
+
     if (res?.error) {
       try {
         const parsed = JSON.parse(res.error)
+
         message = Array.isArray(parsed?.message) ? parsed.message[0] : (parsed?.message ?? message)
       } catch {
         message = res.error // texto plano
       }
     }
+
     setErrorState({ message: [message] })
   }
 
