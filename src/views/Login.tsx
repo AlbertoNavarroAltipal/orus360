@@ -103,25 +103,31 @@ const Login = ({ mode }: { mode: Mode }) => {
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
-  const onSubmit: SubmitHandler<FormData> = async (data: FormData) => {
+  const onSubmit: SubmitHandler<FormData> = async data => {
     const res = await signIn('credentials', {
       email: data.email,
       password: data.password,
       redirect: false
+      // callbackUrl: "/"  // opcional; si lo pones, relativo
     })
 
-    if (res && res.ok && res.error === null) {
-      // Vars
+    if (res?.ok && !res.error) {
       const redirectURL = searchParams.get('redirectTo') ?? '/'
-
       router.replace(getLocalizedUrl(redirectURL, locale as Locale))
-    } else {
-      if (res?.error) {
-        const error = JSON.parse(res.error)
+      return
+    }
 
-        setErrorState(error)
+    // Manejo robusto de errores
+    let message = 'Invalid credentials'
+    if (res?.error) {
+      try {
+        const parsed = JSON.parse(res.error)
+        message = Array.isArray(parsed?.message) ? parsed.message[0] : (parsed?.message ?? message)
+      } catch {
+        message = res.error // texto plano
       }
     }
+    setErrorState({ message: [message] })
   }
 
   return (
@@ -254,6 +260,7 @@ const Login = ({ mode }: { mode: Mode }) => {
           >
             Sign in with Google
           </Button>
+          <Button onClick={() => signIn('cognito', { callbackUrl: '/' })}>Sign in with Cognito</Button>
         </div>
       </div>
     </div>
