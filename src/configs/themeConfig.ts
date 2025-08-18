@@ -54,7 +54,7 @@ export type Config = {
 }
 
 const themeConfig: Config = {
-  templateName: 'Materio-ORUS',
+  templateName: 'ORUS',
   homePageUrl: '/dashboards/crm',
   settingsCookieName: 'materio-mui-next-orus-360',
   mode: 'system', // 'system', 'light', 'dark'
