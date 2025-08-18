@@ -54,11 +54,11 @@ export type Config = {
 }
 
 const themeConfig: Config = {
-  templateName: 'Materio',
+  templateName: 'Materio-ORUS',
   homePageUrl: '/dashboards/crm',
-  settingsCookieName: 'materio-mui-next-demo-1',
+  settingsCookieName: 'materio-mui-next-orus-360',
   mode: 'system', // 'system', 'light', 'dark'
-  skin: 'default', // 'default', 'bordered'
+  skin: 'bordered', // 'default', 'bordered'
   semiDark: false, // true, false
   layout: 'vertical', // 'vertical', 'collapsed', 'horizontal'
   layoutPadding: 24, // Common padding for header, content, footer layout components (in px)
