@@ -16,6 +16,7 @@
     "removeI18n": "tsx src/remove-translation-scripts/index.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.649.0",
     "aws-amplify": "^6.4.1",
     "@auth/prisma-adapter": "2.7.4",
     "@aws-amplify/backend": "^1.16.1",
