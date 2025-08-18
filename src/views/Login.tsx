@@ -248,6 +248,13 @@ const Login = ({ mode }: { mode: Mode }) => {
 
         return
       }
+
+      // Usuario o contraseña incorrectos
+      if (dataJson?.code === 'NotAuthorizedException') {
+        setErrorState({ message: [dataJson?.message || 'Usuario o contraseña incorrectos.'] })
+
+        return
+      }
     }
 
     // Si nada de lo anterior funcionó, muestra error genérico
