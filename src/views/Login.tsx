@@ -64,6 +64,15 @@ const Login = ({ mode }: { mode: Mode }) => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false)
   const [errorState, setErrorState] = useState<ErrorType | null>(null)
+  const [isMfaStep, setIsMfaStep] = useState(false)
+  const [mfaSession, setMfaSession] = useState<string | null>(null)
+  const [mfaType, setMfaType] = useState<'SMS_MFA' | 'SOFTWARE_TOKEN_MFA'>('SMS_MFA')
+  const [mfaDestination, setMfaDestination] = useState<string | null>(null)
+  const [mfaCode, setMfaCode] = useState('')
+  const [isMfaSetup, setIsMfaSetup] = useState(false)
+  const [totpSecret, setTotpSecret] = useState<string | null>(null)
+  const [totpSession, setTotpSession] = useState<string | null>(null)
+  const [totpCode, setTotpCode] = useState('')
 
   // Vars
   const darkImg = '/images/pages/auth-v2-mask-dark.png'
@@ -82,7 +91,8 @@ const Login = ({ mode }: { mode: Mode }) => {
   const {
     control,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
+    watch
   } = useForm<FormData>({
     resolver: valibotResolver(schema),
     defaultValues: {
@@ -104,36 +114,214 @@ const Login = ({ mode }: { mode: Mode }) => {
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
   const onSubmit: SubmitHandler<FormData> = async data => {
-    const res = await signIn('credentials', {
-      email: data.email,
-      password: data.password,
-      redirect: false
+    // Step 3: Verify TOTP and complete MFA_SETUP
+    if (isMfaSetup) {
+      if (!totpSession || !totpCode) {
+        setErrorState({ message: ['Ingresa el código de 6 dígitos.'] })
 
-      // callbackUrl: "/"  // opcional; si lo pones, relativo
-    })
+        return
+      }
 
-    if (res?.ok && !res.error) {
-      const redirectURL = searchParams.get('redirectTo') ?? '/'
+      // 3a) VerifySoftwareToken to get new Session
+      const verifyRes = await fetch('/api/cognito/totp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session: totpSession, code: totpCode })
+      })
 
-      router.replace(getLocalizedUrl(redirectURL, locale as Locale))
-      
-return
+      const verifyJson = await verifyRes.json().catch(() => null)
+
+      if (!verifyRes.ok || !verifyJson?.session) {
+        setErrorState({ message: [verifyJson?.message || 'Código TOTP inválido'] })
+
+        return
+      }
+
+      // 3b) Complete MFA_SETUP with NextAuth Credentials
+      const res = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        completeMfaSetupSession: verifyJson.session,
+        redirect: false
+      })
+
+      if (res?.ok && !res.error) {
+        const redirectURL = searchParams.get('redirectTo') ?? '/'
+
+        router.replace(getLocalizedUrl(redirectURL, locale as Locale))
+
+        return
+      }
+
+      let message = 'No se pudo completar la configuración MFA.'
+
+      if (res?.error) {
+        try {
+          const parsed = JSON.parse(res.error)
+
+          message = Array.isArray(parsed?.message) ? parsed.message[0] : (parsed?.message ?? message)
+        } catch {
+          message = res.error
+        }
+      }
+
+      setErrorState({ message: [message] })
+
+      return
     }
 
-    // Manejo robusto de errores
-    let message = 'Invalid credentials'
+    // Step 2: MFA
+    if (isMfaStep) {
+      if (!mfaSession || !mfaCode) {
+        setErrorState({ message: ['Ingresa el código MFA.'] })
 
-    if (res?.error) {
-      try {
-        const parsed = JSON.parse(res.error)
+        return
+      }
 
-        message = Array.isArray(parsed?.message) ? parsed.message[0] : (parsed?.message ?? message)
-      } catch {
-        message = res.error // texto plano
+      const res = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        mfaCode,
+        mfaType,
+        session: mfaSession,
+        redirect: false
+      })
+
+      if (res?.ok && !res.error) {
+        const redirectURL = searchParams.get('redirectTo') ?? '/'
+
+        router.replace(getLocalizedUrl(redirectURL, locale as Locale))
+
+        return
+      }
+
+      let message = 'Código inválido o expirado'
+
+      if (res?.error) {
+        try {
+          const parsed = JSON.parse(res.error)
+
+          message = Array.isArray(parsed?.message) ? parsed.message[0] : (parsed?.message ?? message)
+        } catch {
+          message = res.error
+        }
+      }
+
+      setErrorState({ message: [message] })
+
+      return
+    }
+
+    // Step 1: email + password (preflight to detect MFA_REQUIRED/MFA_SETUP)
+    const res = await fetch('/api/cognito/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: data.email, password: data.password })
+    })
+
+    if (res.ok) {
+      // No MFA required (según preflight), intentamos finalizar con NextAuth credentials
+      const signInRes = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false
+      })
+
+      if (signInRes?.ok && !signInRes.error) {
+        const redirectURL = searchParams.get('redirectTo') ?? '/'
+
+        router.replace(getLocalizedUrl(redirectURL, locale as Locale))
+
+        return
+      }
+
+      // Si NextAuth devolvió un reto igualmente, manejarlo aquí
+      if (signInRes?.error) {
+        try {
+          const parsed = JSON.parse(signInRes.error)
+
+          if (parsed?.code === 'MFA_REQUIRED') {
+            setIsMfaStep(true)
+            setMfaSession(parsed.session)
+            setMfaType(parsed.challenge === 'SOFTWARE_TOKEN_MFA' ? 'SOFTWARE_TOKEN_MFA' : 'SMS_MFA')
+            setMfaDestination(parsed.destination || null)
+            setErrorState({ message: ['Ingresa el código MFA enviado.'] })
+
+            return
+          }
+
+          if (parsed?.code === 'MFA_SETUP_REQUIRED') {
+            const assocRes = await fetch('/api/cognito/totp/associate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session: parsed.session })
+            })
+
+            const assocJson = await assocRes.json().catch(() => null)
+
+            if (!assocRes.ok || !assocJson?.secret || !assocJson?.session) {
+              setErrorState({ message: [assocJson?.message || 'No se pudo iniciar la configuración de TOTP'] })
+
+              return
+            }
+
+            setIsMfaStep(false)
+            setIsMfaSetup(true)
+            setTotpSecret(assocJson.secret)
+            setTotpSession(assocJson.session)
+            setErrorState({ message: ['Escanea el QR y escribe el código de tu app autenticadora.'] })
+
+            return
+          }
+
+          const message = Array.isArray(parsed?.message) ? parsed.message[0] : parsed?.message
+
+          if (message) setErrorState({ message: [message] })
+        } catch {
+          setErrorState({ message: [signInRes.error] })
+        }
+      }
+    } else {
+      const dataJson = await res.json().catch(() => null)
+
+      if (dataJson?.code === 'MFA_REQUIRED') {
+        setIsMfaStep(true)
+        setMfaSession(dataJson.session)
+        setMfaType(dataJson.challenge === 'SOFTWARE_TOKEN_MFA' ? 'SOFTWARE_TOKEN_MFA' : 'SMS_MFA')
+        setMfaDestination(dataJson.destination || null)
+        setErrorState({ message: ['Ingresa el código MFA enviado.'] })
+
+        return
+      }
+
+      if (dataJson?.code === 'MFA_SETUP_REQUIRED') {
+        // Start TOTP association
+        const assocRes = await fetch('/api/cognito/totp/associate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session: dataJson.session })
+        })
+
+        const assocJson = await assocRes.json().catch(() => null)
+
+        if (!assocRes.ok || !assocJson?.secret || !assocJson?.session) {
+          setErrorState({ message: [assocJson?.message || 'No se pudo iniciar la configuración de TOTP'] })
+
+          return
+        }
+
+        setIsMfaStep(false)
+        setIsMfaSetup(true)
+        setTotpSecret(assocJson.secret)
+        setTotpSession(assocJson.session)
+        setErrorState({ message: ['Escanea el QR y escribe el código de tu app autenticadora.'] })
+
+        return
       }
     }
 
-    setErrorState({ message: [message] })
+    // Si nada de lo anterior funcionó, muestra error genérico
+    setErrorState({ message: ['Invalid credentials'] })
   }
 
   return (
@@ -215,6 +403,7 @@ return
                   label='Password'
                   id='login-password'
                   type={isPasswordShown ? 'text' : 'password'}
+                  disabled={isMfaStep}
                   onChange={e => {
                     field.onChange(e.target.value)
                     errorState !== null && setErrorState(null)
@@ -240,6 +429,51 @@ return
                 />
               )}
             />
+            {isMfaStep && (
+              <TextField
+                fullWidth
+                label={`Código MFA${mfaDestination ? ` (${mfaDestination})` : ''}`}
+                value={mfaCode}
+                onChange={e => {
+                  setMfaCode(e.target.value)
+                  errorState !== null && setErrorState(null)
+                }}
+              />
+            )}
+            {isMfaSetup && (
+              <div className='flex flex-col gap-3'>
+                <Typography variant='h6'>Configura tu app autenticadora</Typography>
+                {totpSecret && (
+                  <div className='flex flex-col items-center gap-2'>
+                    {(() => {
+                      const issuer = themeConfig.templateName || 'App'
+                      const emailVal = watch('email') || 'user'
+                      const otpauth = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(emailVal)}?secret=${totpSecret}&issuer=${encodeURIComponent(issuer)}`
+
+                      return (
+                        <>
+                          <Typography variant='body2' className='text-center break-all'>
+                            URI TOTP: {otpauth}
+                          </Typography>
+                          <Typography variant='body2' className='text-center'>
+                            Si no puedes usar el enlace, agrega manualmente la clave: <b>{totpSecret}</b>
+                          </Typography>
+                        </>
+                      )
+                    })()}
+                  </div>
+                )}
+                <TextField
+                  fullWidth
+                  label='Código de 6 dígitos'
+                  value={totpCode}
+                  onChange={e => {
+                    setTotpCode(e.target.value)
+                    errorState !== null && setErrorState(null)
+                  }}
+                />
+              </div>
+            )}
             <div className='flex justify-between items-center flex-wrap gap-x-3 gap-y-1'>
               <FormControlLabel control={<Checkbox defaultChecked />} label='Remember me' />
               <Typography className='text-end' color='primary.main' component={Link} href='/forgot-password'>
@@ -247,7 +481,7 @@ return
               </Typography>
             </div>
             <Button fullWidth variant='contained' type='submit'>
-              Log In
+              {isMfaSetup ? 'Verificar TOTP' : isMfaStep ? 'Confirmar MFA' : 'Log In'}
             </Button>
             <div className='flex justify-center items-center flex-wrap gap-2'>
               <Typography>New on our platform?</Typography>
@@ -266,7 +500,7 @@ return
           >
             Sign in with Google
           </Button>
-          <Button onClick={() => signIn('cognito', { callbackUrl: '/' })}>Sign in with Cognito</Button>
+          {!isMfaStep && <Button onClick={() => signIn('cognito', { callbackUrl: '/' })}>Sign in with Cognito</Button>}
         </div>
       </div>
     </div>

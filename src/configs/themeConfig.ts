@@ -57,7 +57,7 @@ const themeConfig: Config = {
   templateName: 'ORUS',
   homePageUrl: '/dashboards/crm',
   settingsCookieName: 'materio-mui-next-orus-360',
-  mode: 'system', // 'system', 'light', 'dark'
+  mode: 'light', // 'system', 'light', 'dark'
   skin: 'bordered', // 'default', 'bordered'
   semiDark: false, // true, false
   layout: 'vertical', // 'vertical', 'collapsed', 'horizontal'

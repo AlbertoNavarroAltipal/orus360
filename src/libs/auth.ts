@@ -1,33 +1,53 @@
-// Third-party Imports
-import GoogleProvider from 'next-auth/providers/google'
-import CognitoProvider from 'next-auth/providers/cognito'
-import CredentialsProvider from 'next-auth/providers/credentials'
-import type { NextAuthOptions } from 'next-auth'
-import { CognitoIdentityProviderClient, InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider'
+import { createHmac } from 'crypto'
 
-import crypto from 'crypto'
+import type { NextAuthOptions } from 'next-auth'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import CognitoProvider from 'next-auth/providers/cognito'
+import GoogleProvider from 'next-auth/providers/google'
+import {
+  CognitoIdentityProviderClient,
+  InitiateAuthCommand,
+  RespondToAuthChallengeCommand
+} from '@aws-sdk/client-cognito-identity-provider'
+
+const decodeJwt = (token: string) => {
+  const payload = token.split('.')[1]
+  const b64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+  const json = Buffer.from(b64, 'base64').toString('utf-8')
+
+  return JSON.parse(json)
+}
 
 export const authOptions: NextAuthOptions = {
-  // ** Configure one or more authentication providers
-  // ** Please refer to https://next-auth.js.org/configuration/options#providers for more `providers` options
   providers: [
     CredentialsProvider({
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
+        password: { label: 'Password', type: 'password' },
+
+        // Extra fields for MFA second-step
+        mfaCode: { label: 'MFA Code', type: 'text' },
+        mfaType: { label: 'MFA Type', type: 'text' },
+        session: { label: 'Session', type: 'text' },
+
+        // Complete MFA setup (TOTP): session from VerifySoftwareToken
+        completeMfaSetupSession: { label: 'Complete MFA Setup Session', type: 'text' }
       },
       authorize: async credentials => {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error(JSON.stringify({ message: 'Email y contraseña son requeridos' }))
-        }
+        const email = (credentials?.email as string) || undefined
+        const password = (credentials?.password as string) || undefined
+        const mfaCode = (credentials?.mfaCode as string) || undefined
+        const mfaType = ((credentials?.mfaType as string) || 'SMS_MFA') as 'SMS_MFA' | 'SOFTWARE_TOKEN_MFA'
+        const sessionToken = (credentials?.session as string) || undefined
+        const completeMfaSetupSession = (credentials?.completeMfaSetupSession as string) || undefined
 
-        // Read configuration from env or amplify_outputs.json
         const clientId = process.env.COGNITO_CLIENT_ID || process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID
         const region = process.env.AWS_REGION || process.env.NEXT_PUBLIC_AWS_REGION
         const clientSecret = process.env.COGNITO_CLIENT_SECRET
 
         let fallback: any = null
+
         if (!clientId || !region) {
           try {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -47,60 +67,169 @@ export const authOptions: NextAuthOptions = {
         const cognito = new CognitoIdentityProviderClient({ region: resolvedRegion })
 
         try {
-          // SECRET_HASH if client has secret
-          const authParams: Record<string, string> = {
-            USERNAME: credentials.email,
-            PASSWORD: credentials.password
+          // Step 2: MFA RespondToAuthChallenge
+          if (email && mfaCode && sessionToken) {
+            const challengeName = mfaType === 'SOFTWARE_TOKEN_MFA' ? 'SOFTWARE_TOKEN_MFA' : 'SMS_MFA'
+
+            const challengeResponses: Record<string, string> = {
+              USERNAME: email,
+              [challengeName === 'SOFTWARE_TOKEN_MFA' ? 'SOFTWARE_TOKEN_MFA_CODE' : 'SMS_MFA_CODE']: mfaCode
+            }
+
+            if (clientSecret) {
+              const secretHash = createHmac('sha256', clientSecret)
+                .update(email + resolvedClientId)
+                .digest('base64')
+
+              challengeResponses.SECRET_HASH = secretHash
+            }
+
+            const respond = new RespondToAuthChallengeCommand({
+              ChallengeName: challengeName as any,
+              ClientId: resolvedClientId,
+              ChallengeResponses: challengeResponses,
+              Session: sessionToken
+            })
+
+            const resp = await cognito.send(respond)
+            const result = resp.AuthenticationResult
+
+            if (!result?.IdToken) {
+              throw new Error(JSON.stringify({ message: 'Código MFA inválido o expirado.' }))
+            }
+
+            const idPayload: any = decodeJwt(result.IdToken)
+            const sub = idPayload?.sub as string
+            const name = idPayload?.name as string | undefined
+            const preferred_username = idPayload?.preferred_username as string | undefined
+            const exp = idPayload?.exp as number | undefined
+
+            return {
+              id: sub,
+              name: name || preferred_username || email || 'User',
+              email,
+              idToken: result.IdToken,
+              accessToken: result.AccessToken,
+              refreshToken: result.RefreshToken,
+              expiresAt: exp
+            } as any
+          }
+
+          // Step 3: Complete MFA_SETUP after VerifySoftwareToken
+          if (email && completeMfaSetupSession) {
+            const challengeResponses: Record<string, string> = { USERNAME: email }
+
+            if (clientSecret) {
+              const secretHash = createHmac('sha256', clientSecret)
+                .update(email + resolvedClientId)
+                .digest('base64')
+
+              challengeResponses.SECRET_HASH = secretHash
+            }
+
+            const respondSetup = new RespondToAuthChallengeCommand({
+              ChallengeName: 'MFA_SETUP' as any,
+              ClientId: resolvedClientId,
+              ChallengeResponses: challengeResponses,
+              Session: completeMfaSetupSession
+            })
+
+            const setupResp = await cognito.send(respondSetup)
+            const setupResult = setupResp.AuthenticationResult
+
+            if (!setupResult?.IdToken) {
+              throw new Error(JSON.stringify({ message: 'No se pudo completar la configuración de MFA.' }))
+            }
+
+            const idPayload: any = decodeJwt(setupResult.IdToken)
+            const sub = idPayload?.sub as string
+            const name = idPayload?.name as string | undefined
+            const preferred_username = idPayload?.preferred_username as string | undefined
+            const exp = idPayload?.exp as number | undefined
+
+            return {
+              id: sub,
+              name: name || preferred_username || email || 'User',
+              email,
+              idToken: setupResult.IdToken,
+              accessToken: setupResult.AccessToken,
+              refreshToken: setupResult.RefreshToken,
+              expiresAt: exp
+            } as any
+          }
+
+          // Step 1: USER_PASSWORD_AUTH
+          if (!email || !password) {
+            throw new Error(JSON.stringify({ message: 'Email y contraseña son requeridos' }))
+          }
+
+          const authParameters: Record<string, string> = {
+            USERNAME: email,
+            PASSWORD: password
           }
 
           if (clientSecret) {
-            const secretHash = crypto
-              .createHmac('sha256', clientSecret)
-              .update(credentials.email + resolvedClientId)
+            const secretHash = createHmac('sha256', clientSecret)
+              .update(email + resolvedClientId)
               .digest('base64')
-            authParams.SECRET_HASH = secretHash
+
+            authParameters.SECRET_HASH = secretHash
           }
 
           const cmd = new InitiateAuthCommand({
             AuthFlow: 'USER_PASSWORD_AUTH',
             ClientId: resolvedClientId,
-            AuthParameters: authParams
+            AuthParameters: authParameters
           })
 
           const resp = await cognito.send(cmd)
           const result = resp.AuthenticationResult
 
-          // Handle challenges (e.g., NEW_PASSWORD_REQUIRED)
           if (!result && resp.ChallengeName) {
+            if (resp.ChallengeName === 'SMS_MFA' || resp.ChallengeName === 'SOFTWARE_TOKEN_MFA') {
+              const dest = resp.ChallengeParameters?.CODE_DELIVERY_DESTINATION
+
+              throw new Error(
+                JSON.stringify({
+                  code: 'MFA_REQUIRED',
+                  challenge: resp.ChallengeName,
+                  session: resp.Session,
+                  destination: dest
+                })
+              )
+            }
+
+            if (resp.ChallengeName === 'MFA_SETUP') {
+              throw new Error(
+                JSON.stringify({
+                  code: 'MFA_SETUP_REQUIRED',
+                  session: resp.Session
+                })
+              )
+            }
+
             if (resp.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
               throw new Error(JSON.stringify({ message: 'Debes actualizar tu contraseña antes de continuar.' }))
             }
+
             throw new Error(JSON.stringify({ message: `Se requiere completar el reto: ${resp.ChallengeName}` }))
           }
+
           if (!result?.IdToken) {
             throw new Error(JSON.stringify({ message: 'Autenticación fallida (sin IdToken)' }))
           }
 
-          // Decode JWT payload (base64url)
-          const decode = (token: string) => {
-            const payload = token.split('.')[1]
-            const b64 = payload.replace(/-/g, '+').replace(/_/g, '/')
-            const json = Buffer.from(b64, 'base64').toString('utf-8')
-            return JSON.parse(json)
-          }
-
-          const idPayload: any = decode(result.IdToken)
+          const idPayload: any = decodeJwt(result.IdToken)
           const sub = idPayload?.sub as string
-          const email = idPayload?.email as string | undefined
+          const emailClaim = idPayload?.email as string | undefined
           const name = idPayload?.name as string | undefined
           const preferred_username = idPayload?.preferred_username as string | undefined
           const exp = idPayload?.exp as number | undefined
 
           return {
             id: sub,
-            name: name || preferred_username || email || 'User',
-            email: email,
-            // carry tokens for jwt callback
+            name: name || preferred_username || emailClaim || email || 'User',
+            email: emailClaim || email,
             idToken: result.IdToken,
             accessToken: result.AccessToken,
             refreshToken: result.RefreshToken,
@@ -110,6 +239,11 @@ export const authOptions: NextAuthOptions = {
           const code = e?.name || e?.__type
           const rawMessage = typeof e?.message === 'string' ? e.message : ''
           let message = 'Credenciales inválidas'
+
+          // Bubble up MFA_REQUIRED/MFA_SETUP_REQUIRED as-is so the client can handle steps
+          if (/MFA_REQUIRED|MFA_SETUP_REQUIRED/.test(rawMessage)) {
+            throw new Error(rawMessage)
+          }
 
           if (code === 'UserNotConfirmedException') message = 'Usuario no confirmado. Revisa tu correo.'
           else if (code === 'NotAuthorizedException') {
@@ -129,64 +263,75 @@ export const authOptions: NextAuthOptions = {
         }
       }
     }),
+
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string
     }),
 
-    CognitoProvider({
-      clientId: process.env.COGNITO_CLIENT_ID as string,
-      clientSecret: process.env.COGNITO_CLIENT_SECRET as string,
-      issuer: process.env.COGNITO_ISSUER as string,
-      authorization: {
-        params: {
-          scope: 'openid email profile',
-          lang: 'es'
-        }
-      },
-      checks: ['pkce', 'state'],
-      client: { token_endpoint_auth_method: 'none' } // cliente público
-    })
+    // Cognito OIDC Hosted UI provider
+    CognitoProvider(
+      (() => {
+        const region = process.env.AWS_REGION || process.env.NEXT_PUBLIC_AWS_REGION
+        const clientId = (process.env.COGNITO_CLIENT_ID ||
+          process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID) as string
 
-    // ** ...add more providers here
+        const clientSecret = process.env.COGNITO_CLIENT_SECRET
+        let issuer = process.env.COGNITO_ISSUER as string | undefined
+
+        // Fallback to amplify_outputs.json if needed
+        if (!issuer || !region || !clientId) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const fallback = require('../../amplify_outputs.json')
+            const fbRegion = region || fallback?.auth?.aws_region
+            const poolId = fallback?.auth?.user_pool_id
+
+            if (!issuer && fbRegion && poolId) {
+              issuer = `https://cognito-idp.${fbRegion}.amazonaws.com/${poolId}`
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        const hasSecret = !!clientSecret
+
+        // Build provider options conditionally
+        const base: any = {
+          clientId,
+          issuer,
+          authorization: { params: { scope: 'openid email profile', lang: 'es' } },
+          checks: ['pkce', 'state']
+        }
+
+        if (hasSecret) {
+          base.clientSecret = clientSecret
+
+          // Default token auth method applies (client_secret_basic)
+        } else {
+          // Public client, no secret
+          base.client = { token_endpoint_auth_method: 'none' }
+        }
+
+        return base
+      })()
+    )
   ],
 
-  // ** Please refer to https://next-auth.js.org/configuration/options#session for more `session` options
   session: {
-    /*
-     * Choose how you want to save the user session.
-     * The default is `jwt`, an encrypted JWT (JWE) stored in the session cookie.
-     * If you use an `adapter` however, NextAuth default it to `database` instead.
-     * You can still force a JWT session by explicitly defining `jwt`.
-     * When using `database`, the session cookie will only contain a `sessionToken` value,
-     * which is used to look up the session in the database.
-     * If you use a custom credentials provider, user accounts will not be persisted in a database by NextAuth.js (even if one is configured).
-     * The option to use JSON Web Tokens for session tokens must be enabled to use a custom credentials provider.
-     */
     strategy: 'jwt',
-
-    // ** Seconds - How long until an idle session expires and is no longer valid
-    maxAge: 30 * 24 * 60 * 60 // ** 30 days
+    maxAge: 30 * 24 * 60 * 60
   },
 
-  // ** Please refer to https://next-auth.js.org/configuration/options#pages for more `pages` options
   pages: {
     signIn: '/login'
   },
 
-  // ** Please refer to https://next-auth.js.org/configuration/options#callbacks for more `callbacks` options
   callbacks: {
-    /*
-     * While using `jwt` as a strategy, `jwt()` callback will be called before
-     * the `session()` callback. So we have to add custom parameters in `token`
-     * via `jwt()` callback to make them accessible in the `session()` callback
-     */
     async jwt({ token, user, account, profile }) {
       if (user) {
-        // Mantener nombre personalizado
         token.name = user.name
-
-        // When logging in via Credentials, capture tokens
         const u: any = user
 
         if (u?.idToken) token.id_token = u.idToken
@@ -194,15 +339,11 @@ export const authOptions: NextAuthOptions = {
         if (u?.expiresAt) token.expires_at = u.expiresAt
       }
 
-      // En el primer login con Cognito, `account` y `profile` vienen poblados
       if (account && profile) {
-        // Tokens y expiración (no los expondremos al cliente por seguridad a menos que lo solicites)
         token.access_token = (account as any).access_token
         token.id_token = (account as any).id_token
         token.expires_at = (account as any).expires_at
 
-        // Claims comunes de Cognito disponibles en `profile`
-        // Tipos flexibles para evitar romper si faltan
         const p: any = profile
 
         if (typeof p?.email_verified !== 'undefined') token.email_verified = p.email_verified
@@ -215,10 +356,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        // Sincronizar campos útiles y seguros en el objeto de sesión del cliente
         session.user.name = token.name
-
-        // Mapeos adicionales
         session.user.emailVerified = token.email_verified
         session.user.phoneNumber = token.phone_number
         session.user.cognitoGroups = token.cognito_groups

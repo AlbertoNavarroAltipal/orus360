@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 
 import { signIn } from 'next-auth/react'
 
@@ -66,6 +66,7 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
 
   // Hooks
   const { lang: locale } = useParams()
+  const router = useRouter()
   const authBackground = useImageVariant(mode, lightImg, darkImg)
   const { settings } = useSettings()
 
@@ -92,6 +93,7 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
   }, [stage, email, password, code, acceptTerms])
 
   const handleSignUp = async () => {
+    if (loading) return
     setError(null)
     setInfo(null)
     setLoading(true)
@@ -119,6 +121,14 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
         setError(
           'El registro de usuarios está deshabilitado en este User Pool. Pide al administrador que habilite el self sign-up o usa el botón "Continuar con Cognito" si tu Hosted UI lo permite.'
         )
+      } else if (name === 'UsernameExistsException') {
+        // El usuario ya existe (puede estar sin confirmar). Ofrecer pasar a confirmación y reenvío de código.
+        setStage('confirm')
+        setInfo(
+          'El usuario ya existe. Si no confirmaste, ingresa el código que recibiste o solicita reenviar el código.'
+        )
+      } else if (name === 'LimitExceededException' || /Attempt limit exceeded/i.test(msg)) {
+        setError('Demasiados intentos. Intenta de nuevo en unos minutos.')
       } else {
         setError(msg || 'Error al registrar. Intenta de nuevo.')
       }
@@ -128,6 +138,7 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
   }
 
   const handleConfirm = async () => {
+    if (loading) return
     setError(null)
     setInfo(null)
     setLoading(true)
@@ -135,12 +146,20 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
     try {
       await confirmSignUp({ username: email, confirmationCode: code })
       setStage('done')
-      setInfo('Cuenta confirmada. Iniciando sesión...')
+      setInfo('Cuenta confirmada. Redirigiendo a verificación en 2 pasos...')
 
-      // Use NextAuth to start Cognito OAuth login
-      const callbackUrl = getLocalizedUrl('/', locale as any)
+      // Guardar temporalmente para el enrolamiento TOTP en Two Step
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('enroll:email', email)
+          sessionStorage.setItem('enroll:password', password)
+        } catch {
+          // ignore
+        }
+      }
 
-      await signIn('cognito', { callbackUrl })
+      // Redirigir a la nueva página de Two Step para completar MFA (TOTP) dentro de la app
+      router.replace(getLocalizedUrl('/pages/auth/two-step', locale as any))
     } catch (e: any) {
       setError(e?.message || 'Error al confirmar el código.')
     } finally {
