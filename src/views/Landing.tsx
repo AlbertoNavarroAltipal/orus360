@@ -28,10 +28,17 @@ import CloudIcon from '@mui/icons-material/Cloud'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 
 import { useSettings } from '@core/hooks/useSettings'
+import { useImageVariant } from '@core/hooks/useImageVariant'
 
 export default function SuperAppLanding() {
   const { settings } = useSettings()
   const handleCognitoLogin = () => signIn('cognito', { callbackUrl: '/' })
+
+  const logoSrc = useImageVariant(
+    (settings.mode as any) ?? 'system',
+    '/images/Altipal/logo_orus_azul_fondo_transparente_sin_texto.png',
+    '/images/Altipal/logo_orus_blanco_fondo_transparente.png'
+  )
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
@@ -46,9 +53,13 @@ export default function SuperAppLanding() {
         })}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant='h6' color='inherit' noWrap>
-            ORUS 360
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoSrc} alt='ORUS logo' height={28} width={28} />
+            <Typography variant='h6' color='inherit' noWrap>
+              ORUS 360
+            </Typography>
+          </Box>
           <Box>
             <Button
               href='https://us-east-1s5gznopkq.auth.us-east-1.amazoncognito.com/signup?client_id=5535e1dvldtrr2logi6sqfvkr6&code_challenge=0En9ycDofEFN2lHZGPTc751xoWMtEj23SHOCIq_dGek&code_challenge_method=S256&lang=es&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fcognito&response_type=code&scope=openid+email+profile&state=9LLxIGer2oFI1W_1XVJN_CeMyxeG-ErAxTsCNCJz5Vw'

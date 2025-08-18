@@ -10,8 +10,8 @@ import styled from '@emotion/styled'
 // Type Imports
 import type { VerticalNavContextProps } from '@menu/contexts/verticalNavContext'
 
-// Component Imports
-import MaterioLogo from '@core/svg/Logo'
+// Hook Imports
+import { useImageVariant } from '@core/hooks/useImageVariant'
 
 // Config Imports
 import themeConfig from '@configs/themeConfig'
@@ -55,6 +55,13 @@ const Logo = ({ color }: { color?: CSSProperties['color'] }) => {
   // Vars
   const { layout } = settings
 
+  // Determinar el logo según el modo actual
+  const logoSrc = useImageVariant(
+    (settings.mode as any) ?? 'system',
+    '/images/Altipal/logo_orus_azul_fondo_transparente_sin_texto.png',
+    '/images/Altipal/logo_orus_blanco_fondo_transparente.png'
+  )
+
   useEffect(() => {
     if (layout !== 'collapsed') {
       return
@@ -72,7 +79,8 @@ const Logo = ({ color }: { color?: CSSProperties['color'] }) => {
 
   return (
     <div className='flex items-center min-bs-[24px]'>
-      <MaterioLogo className='text-[22px] text-primary' />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logoSrc} alt='ORUS logo' height={24} width={24} className='block' />
       <LogoText
         color={color}
         ref={logoTextRef}
