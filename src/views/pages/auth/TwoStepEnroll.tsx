@@ -11,6 +11,7 @@ import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 
 import { OTPInput } from 'input-otp'
+import QRCode from 'qrcode'
 import classnames from 'classnames'
 
 import type { Mode } from '@core/types'
@@ -104,11 +105,33 @@ const TwoStepEnroll = ({ mode }: { mode: Mode }) => {
   }, [])
 
   const issuer = 'ORUS'
+
   const otpauth =
     secret && email
       ? `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(email)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`
       : ''
 
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    const gen = async () => {
+      if (!otpauth) {
+        setQrDataUrl(null)
+
+        return
+      }
+
+      try {
+        const url = await QRCode.toDataURL(otpauth, { margin: 1, scale: 4 })
+
+        setQrDataUrl(url)
+      } catch {
+        setQrDataUrl(null)
+      }
+    }
+
+    gen()
+  }, [otpauth])
   const onVerify = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -185,7 +208,16 @@ const TwoStepEnroll = ({ mode }: { mode: Mode }) => {
             </div>
             {secret ? (
               <>
-                <TextField fullWidth label='URI TOTP' value={otpauth} InputProps={{ readOnly: true }} />
+                {qrDataUrl ? (
+                  <div className='flex flex-col items-center gap-2'>
+                    <img src={qrDataUrl || undefined} alt='QR TOTP' className='rounded border' />
+                    <Typography variant='body2' className='text-center'>
+                      Escanea este QR con Google Authenticator u otra app TOTP.
+                    </Typography>
+                  </div>
+                ) : (
+                  <TextField fullWidth label='URI TOTP' value={otpauth} InputProps={{ readOnly: true }} />
+                )}
                 <Typography variant='body2' className='text-center'>
                   Si no puedes usar el enlace, agrega manualmente la clave: <b>{secret}</b>
                 </Typography>
