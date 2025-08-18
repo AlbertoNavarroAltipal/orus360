@@ -59,21 +59,41 @@ export const authOptions: NextAuthOptions = {
      * the `session()` callback. So we have to add custom parameters in `token`
      * via `jwt()` callback to make them accessible in the `session()` callback
      */
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
       if (user) {
-        /*
-         * For adding custom parameters to user in session, we first need to add those parameters
-         * in token which then will be available in the `session()` callback
-         */
+        // Mantener nombre personalizado
         token.name = user.name
+      }
+
+      // En el primer login con Cognito, `account` y `profile` vienen poblados
+      if (account && profile) {
+        // Tokens y expiración (no los expondremos al cliente por seguridad a menos que lo solicites)
+        token.access_token = (account as any).access_token
+        token.id_token = (account as any).id_token
+        token.expires_at = (account as any).expires_at
+
+        // Claims comunes de Cognito disponibles en `profile`
+        // Tipos flexibles para evitar romper si faltan
+        const p: any = profile
+
+        if (typeof p?.email_verified !== 'undefined') token.email_verified = p.email_verified
+        if (typeof p?.phone_number !== 'undefined') token.phone_number = p.phone_number
+        if (Array.isArray(p?.['cognito:groups'])) token.cognito_groups = p['cognito:groups']
+        if (typeof p?.preferred_username !== 'undefined') token.preferred_username = p.preferred_username
       }
 
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        // ** Add custom params to user in session which are added in `jwt()` callback via `token` parameter
+        // Sincronizar campos útiles y seguros en el objeto de sesión del cliente
         session.user.name = token.name
+
+        // Mapeos adicionales
+        session.user.emailVerified = token.email_verified
+        session.user.phoneNumber = token.phone_number
+        session.user.cognitoGroups = token.cognito_groups
+        session.user.preferredUsername = token.preferred_username
       }
 
       return session
