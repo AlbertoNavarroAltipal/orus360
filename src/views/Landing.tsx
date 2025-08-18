@@ -13,7 +13,6 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Container from '@mui/material/Container'
 import Grid from '@mui/material/Grid'
-import Paper from '@mui/material/Paper'
 import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
@@ -24,6 +23,10 @@ import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import { alpha, lighten, useTheme } from '@mui/material/styles'
+import Chip from '@mui/material/Chip'
+import Avatar from '@mui/material/Avatar'
+import useMediaQuery from '@mui/material/useMediaQuery'
 
 // Hooks
 
@@ -34,11 +37,15 @@ import LayersIcon from '@mui/icons-material/Layers'
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone'
 import CloudIcon from '@mui/icons-material/Cloud'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import LoginIcon from '@mui/icons-material/Login'
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 
 import { useSettings } from '@core/hooks/useSettings'
 import { useImageVariant } from '@core/hooks/useImageVariant'
 
 export default function SuperAppLanding() {
+  const theme = useTheme()
+  const isSmDown = useMediaQuery(theme.breakpoints.down('sm'))
   const { settings } = useSettings()
   const handleCognitoLogin = () => signIn('cognito', { callbackUrl: '/' })
 
@@ -65,14 +72,27 @@ export default function SuperAppLanding() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
+    <Box
+      sx={theme => ({
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: theme.palette.background.default,
+        backgroundImage:
+          theme.palette.mode === 'light'
+            ? `linear-gradient(135deg, #ffffff 0%, ${lighten(theme.palette.primary.main, 0.88)} 100%)`
+            : `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.2)} 0%, ${alpha(theme.palette.background.default, 0.8)} 100%)`
+      })}
+    >
       {/* Header */}
       <AppBar
         position='fixed'
         color='default'
         elevation={settings.skin === 'bordered' ? 0 : 1}
         sx={theme => ({
-          backgroundColor: theme.palette.background.paper,
+          backgroundColor: alpha(theme.palette.background.paper, 0.7),
+          backdropFilter: 'saturate(180%) blur(10px)',
+          WebkitBackdropFilter: 'saturate(180%) blur(10px)',
           borderBottom: settings.skin === 'bordered' ? `1px solid ${theme.palette.divider}` : undefined
         })}
       >
@@ -100,10 +120,11 @@ export default function SuperAppLanding() {
             <Button
               href='https://us-east-1s5gznopkq.auth.us-east-1.amazoncognito.com/signup?client_id=5535e1dvldtrr2logi6sqfvkr6&code_challenge=0En9ycDofEFN2lHZGPTc751xoWMtEj23SHOCIq_dGek&code_challenge_method=S256&lang=es&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fcognito&response_type=code&scope=openid+email+profile&state=9LLxIGer2oFI1W_1XVJN_CeMyxeG-ErAxTsCNCJz5Vw'
               color='inherit'
+              startIcon={<RocketLaunchIcon />}
             >
               Crear cuenta
             </Button>
-            <Button variant='contained' color='primary' onClick={handleCognitoLogin}>
+            <Button variant='contained' color='primary' onClick={handleCognitoLogin} startIcon={<LoginIcon />}>
               Iniciar sesión en ORUS
             </Button>
           </Stack>
@@ -114,26 +135,75 @@ export default function SuperAppLanding() {
       <Toolbar />
 
       {/* Hero Section */}
-      <Container id='hero' sx={{ py: 10, textAlign: 'center' }}>
-        <Typography variant='h3' component='h1' gutterBottom>
-          ORUS 360: la super app corporativa para operar, colaborar y escalar
-        </Typography>
-        <Typography variant='h6' color='text.secondary' paragraph>
-          Unifica procesos, datos y comunicación en una sola plataforma con seguridad empresarial.
-        </Typography>
-        <Box sx={{ mt: 4 }}>
-          <Button variant='contained' size='large' color='primary' onClick={handleCognitoLogin}>
-            Iniciar sesión en ORUS
-          </Button>
-          <Button variant='outlined' size='large' sx={{ ml: 2 }} component={Link} href='#features'>
-            Ver características
-          </Button>
-        </Box>
+      <Box
+        id='hero'
+        sx={theme => ({
+          textAlign: 'center',
+          pt: { xs: 14, md: 18 },
+          pb: { xs: 10, md: 14 },
+          backgroundImage: `radial-gradient(800px 400px at -10% -10%, ${alpha(theme.palette.primary.main, 0.15)}, transparent 60%),
+            radial-gradient(800px 400px at 110% -10%, ${alpha(theme.palette.primary.dark, 0.12)}, transparent 60%)`
+        })}
+      >
+        <Container maxWidth='lg'>
+          <Stack alignItems='center' spacing={2} sx={{ mb: 2 }}>
+            <Chip
+              label='Plataforma empresarial'
+              color='primary'
+              variant='outlined'
+              size={isSmDown ? 'small' : 'medium'}
+            />
+          </Stack>
+          <Typography variant='h3' component='h1' gutterBottom sx={{ fontWeight: 800 }}>
+            ORUS 360: la super app corporativa para operar, colaborar y escalar
+          </Typography>
+          <Typography variant='h6' color='text.secondary' paragraph>
+            Unifica procesos, datos y comunicación en una sola plataforma con seguridad empresarial.
+          </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent='center' sx={{ mt: 4 }}>
+            <Button
+              variant='contained'
+              size='large'
+              color='primary'
+              onClick={handleCognitoLogin}
+              startIcon={<LoginIcon />}
+            >
+              Iniciar sesión en ORUS
+            </Button>
+            <Button
+              variant='outlined'
+              size='large'
+              component={Link}
+              href='#caracteristicas'
+              startIcon={<RocketLaunchIcon />}
+            >
+              Ver características
+            </Button>
+          </Stack>
+        </Container>
+      </Box>
+
+      {/* Barra de confianza (logos) */}
+      <Container maxWidth='lg' sx={{ py: 4 }}>
+        <Grid container spacing={3} alignItems='center' justifyContent='center'>
+          {[
+            '/images/logos/google.png',
+            '/images/logos/github.png',
+            '/images/logos/slack.png',
+            '/images/logos/stripe.png',
+            '/images/logos/aws.png'
+          ].map((src, i) => (
+            <Grid key={i} item xs={6} sm='auto'>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt='logo confianza' height={22} style={{ opacity: 0.7 }} />
+            </Grid>
+          ))}
+        </Grid>
       </Container>
 
       {/* ¿Qué es? */}
-      <Container id='que-es' sx={{ py: 10 }}>
-        <Grid container spacing={6} alignItems='center'>
+      <Container id='que-es' sx={{ py: { xs: 8, md: 12 } }} maxWidth='lg'>
+        <Grid container spacing={8} alignItems='center'>
           <Grid item xs={12} md={6}>
             <Typography variant='h4' gutterBottom>
               ¿Qué es ORUS 360?
@@ -142,14 +212,29 @@ export default function SuperAppLanding() {
               ORUS 360 es una plataforma modular que centraliza la operación corporativa en una sola experiencia:
               personas, procesos, datos y comunicación, con seguridad empresarial y escalabilidad.
             </Typography>
-            <Typography variant='body1' color='text.secondary'>
-              Desde inventario y logística hasta colaboración y analítica, ORUS 360 integra tus flujos clave para
-              acelerar la ejecución de tu negocio.
-            </Typography>
+            <Stack spacing={1.5} sx={{ mt: 2 }}>
+              {[
+                'Módulos plug-and-play para acelerar adopción.',
+                'Seguridad y gobierno a nivel corporativo.',
+                'Integración vía APIs con tu stack existente.'
+              ].map((txt, i) => (
+                <Stack key={i} direction='row' spacing={1.5} alignItems='center'>
+                  <CheckCircleIcon color='primary' fontSize='small' />
+                  <Typography variant='body1' color='text.secondary'>
+                    {txt}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Paper
-              sx={theme => ({ p: 4, backgroundColor: theme.palette.background.paper, textAlign: 'center' })}
+            <Card
+              sx={theme => ({
+                p: 4,
+                textAlign: 'center',
+                border: settings.skin === 'bordered' ? `1px solid ${theme.palette.divider}` : undefined,
+                boxShadow: settings.skin === 'bordered' ? 'none' : undefined
+              })}
               elevation={settings.skin === 'bordered' ? 0 : 3}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -157,13 +242,13 @@ export default function SuperAppLanding() {
               <Typography variant='subtitle1' sx={{ mt: 2 }}>
                 Una sola plataforma. Todo tu negocio.
               </Typography>
-            </Paper>
+            </Card>
           </Grid>
         </Grid>
       </Container>
 
       {/* Features Section */}
-      <Container id='caracteristicas' sx={{ py: 10 }}>
+      <Container id='caracteristicas' sx={{ py: { xs: 8, md: 12 } }} maxWidth='lg'>
         <Typography variant='h4' align='center' gutterBottom>
           Características principales
         </Typography>
@@ -205,31 +290,79 @@ export default function SuperAppLanding() {
             }
           ].map((f, i) => (
             <Grid item xs={12} sm={6} md={4} key={i}>
-              <Paper
+              <Card
                 sx={theme => ({
                   p: 4,
                   textAlign: 'center',
                   height: '100%',
-                  backgroundColor: theme.palette.background.paper,
-                  border: settings.skin === 'bordered' ? `1px solid ${theme.palette.divider}` : undefined
+                  border: settings.skin === 'bordered' ? `1px solid ${theme.palette.divider}` : 'none',
+                  transition: 'transform .2s ease, box-shadow .2s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow:
+                      settings.skin === 'bordered' ? `0 8px 24px ${alpha(theme.palette.common.black, 0.08)}` : undefined
+                  }
                 })}
-                elevation={settings.skin === 'bordered' ? 0 : 3}
+                elevation={settings.skin === 'bordered' ? 0 : 2}
               >
-                {f.icon}
+                <Box
+                  sx={theme => ({
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    mx: 'auto',
+                    mb: 2,
+                    display: 'grid',
+                    placeItems: 'center',
+                    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)}, ${alpha(theme.palette.primary.dark, 0.15)})`
+                  })}
+                >
+                  {f.icon}
+                </Box>
                 <Typography variant='h6' gutterBottom>
                   {f.title}
                 </Typography>
                 <Typography variant='body2' color='text.secondary'>
                   {f.desc}
                 </Typography>
-              </Paper>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
+      {/* Estadísticas / indicadores */}
+      <Container maxWidth='lg' sx={{ py: { xs: 6, md: 10 } }}>
+        <Grid container spacing={3}>
+          {[
+            { k: '99.9%', v: 'Uptime' },
+            { k: '50+', v: 'Integraciones' },
+            { k: '12', v: 'Módulos' },
+            { k: 'SLA', v: 'Empresarial' }
+          ].map((s, i) => (
+            <Grid key={i} item xs={6} md={3}>
+              <Card
+                elevation={settings.skin === 'bordered' ? 0 : 1}
+                sx={theme => ({
+                  py: 4,
+                  textAlign: 'center',
+                  border: settings.skin === 'bordered' ? `1px solid ${theme.palette.divider}` : undefined
+                })}
+              >
+                <Typography variant='h4' sx={{ fontWeight: 800 }}>
+                  {s.k}
+                </Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  {s.v}
+                </Typography>
+              </Card>
             </Grid>
           ))}
         </Grid>
       </Container>
 
       {/* Preguntas frecuentes */}
-      <Container id='faq' sx={{ py: 10 }}>
+      <Container id='faq' sx={{ py: { xs: 8, md: 12 } }} maxWidth='lg'>
         <Typography variant='h4' align='center' gutterBottom>
           Preguntas frecuentes
         </Typography>
@@ -272,8 +405,56 @@ export default function SuperAppLanding() {
         </Grid>
       </Container>
 
+      {/* Testimonios */}
+      <Container id='testimonios' maxWidth='lg' sx={{ py: { xs: 8, md: 12 } }}>
+        <Typography variant='h4' align='center' gutterBottom>
+          Lo que dicen nuestros usuarios
+        </Typography>
+        <Grid container spacing={4} sx={{ mt: 1 }}>
+          {[
+            {
+              name: 'María Gómez',
+              role: 'Operaciones',
+              text: 'Centralizamos procesos y aceleramos despliegues. El equipo adoptó ORUS 360 en semanas.'
+            },
+            {
+              name: 'Juan Pérez',
+              role: 'TI',
+              text: 'Integraciones limpias y seguridad sólida. La gobernanza por rol nos dio tranquilidad.'
+            },
+            {
+              name: 'Laura Martínez',
+              role: 'Logística',
+              text: 'Mejor visibilidad y menos fricción entre áreas. El flujo de trabajo es claro y medible.'
+            }
+          ].map((t, i) => (
+            <Grid key={i} item xs={12} md={4}>
+              <Card
+                elevation={settings.skin === 'bordered' ? 0 : 1}
+                sx={theme => ({
+                  height: '100%',
+                  p: 3,
+                  border: settings.skin === 'bordered' ? `1px solid ${theme.palette.divider}` : undefined
+                })}
+              >
+                <Typography color='text.secondary'>“{t.text}”</Typography>
+                <Stack direction='row' spacing={2} alignItems='center' sx={{ mt: 3 }}>
+                  <Avatar>{t.name.charAt(0)}</Avatar>
+                  <Box>
+                    <Typography variant='subtitle2'>{t.name}</Typography>
+                    <Typography variant='caption' color='text.secondary'>
+                      {t.role}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
       {/* Colocar ticket */}
-      <Container id='ticket' sx={{ py: 10 }}>
+      <Container id='ticket' sx={{ py: { xs: 8, md: 12 } }} maxWidth='lg'>
         <Grid container spacing={4}>
           <Grid item xs={12} md={8} sx={{ mx: 'auto' }}>
             <Card
@@ -290,41 +471,51 @@ export default function SuperAppLanding() {
                   Describe tu solicitud y nos pondremos en contacto. También puedes escribir a soporte@orus360.com.
                 </Typography>
                 <Box component='form' onSubmit={onCrearTicket} noValidate>
-                  <Stack spacing={2}>
-                    <TextField
-                      label='Nombre'
-                      value={nombre}
-                      onChange={e => setNombre(e.target.value)}
-                      required
-                      fullWidth
-                    />
-                    <TextField
-                      type='email'
-                      label='Email'
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      required
-                      fullWidth
-                    />
-                    <TextField label='Asunto' value={asunto} onChange={e => setAsunto(e.target.value)} fullWidth />
-                    <TextField
-                      label='Mensaje'
-                      value={mensaje}
-                      onChange={e => setMensaje(e.target.value)}
-                      required
-                      multiline
-                      minRows={4}
-                      fullWidth
-                    />
-                    <Stack direction='row' spacing={2}>
-                      <Button type='submit' variant='contained'>
-                        Enviar
-                      </Button>
-                      <Button variant='outlined' href='mailto:soporte@orus360.com'>
-                        Enviar por correo
-                      </Button>
-                    </Stack>
-                  </Stack>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        label='Nombre'
+                        value={nombre}
+                        onChange={e => setNombre(e.target.value)}
+                        required
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        type='email'
+                        label='Email'
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        required
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField label='Asunto' value={asunto} onChange={e => setAsunto(e.target.value)} fullWidth />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        label='Mensaje'
+                        value={mensaje}
+                        onChange={e => setMensaje(e.target.value)}
+                        required
+                        multiline
+                        minRows={4}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Stack direction='row' spacing={2}>
+                        <Button type='submit' variant='contained'>
+                          Enviar
+                        </Button>
+                        <Button variant='outlined' href='mailto:soporte@orus360.com'>
+                          Enviar por correo
+                        </Button>
+                      </Stack>
+                    </Grid>
+                  </Grid>
                 </Box>
               </CardContent>
             </Card>
@@ -333,26 +524,34 @@ export default function SuperAppLanding() {
       </Container>
 
       {/* CTA final */}
-      <Container id='cta' sx={{ py: 10, textAlign: 'center' }}>
-        <Typography variant='h4' gutterBottom>
-          ¿Listo para empezar?
-        </Typography>
-        <Typography variant='body1' color='text.secondary'>
-          Crea tu cuenta o inicia sesión para explorar ORUS 360.
-        </Typography>
-        <Box sx={{ mt: 3 }}>
-          <Button variant='contained' color='primary' onClick={handleCognitoLogin}>
-            Iniciar sesión en ORUS
-          </Button>
-          <Button
-            href='https://us-east-1s5gznopkq.auth.us-east-1.amazoncognito.com/signup?client_id=5535e1dvldtrr2logi6sqfvkr6&code_challenge=0En9ycDofEFN2lHZGPTc751xoWMtEj23SHOCIq_dGek&code_challenge_method=S256&lang=es&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fcognito&response_type=code&scope=openid+email+profile&state=9LLxIGer2oFI1W_1XVJN_CeMyxeG-ErAxTsCNCJz5Vw'
-            variant='outlined'
-            sx={{ ml: 2 }}
-          >
-            Crear cuenta
-          </Button>
-        </Box>
-      </Container>
+      <Box
+        sx={theme => ({
+          textAlign: 'center',
+          py: { xs: 8, md: 12 },
+          backgroundImage: `radial-gradient(800px 400px at 50% 120%, ${alpha(theme.palette.primary.main, 0.12)}, transparent 60%)`
+        })}
+      >
+        <Container id='cta' maxWidth='lg'>
+          <Typography variant='h4' gutterBottom>
+            ¿Listo para empezar?
+          </Typography>
+          <Typography variant='body1' color='text.secondary'>
+            Crea tu cuenta o inicia sesión para explorar ORUS 360.
+          </Typography>
+          <Box sx={{ mt: 3 }}>
+            <Button variant='contained' color='primary' onClick={handleCognitoLogin}>
+              Iniciar sesión en ORUS
+            </Button>
+            <Button
+              href='https://us-east-1s5gznopkq.auth.us-east-1.amazoncognito.com/signup?client_id=5535e1dvldtrr2logi6sqfvkr6&code_challenge=0En9ycDofEFN2lHZGPTc751xoWMtEj23SHOCIq_dGek&code_challenge_method=S256&lang=es&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fcognito&response_type=code&scope=openid+email+profile&state=9LLxIGer2oFI1W_1XVJN_CeMyxeG-ErAxTsCNCJz5Vw'
+              variant='outlined'
+              sx={{ ml: 2 }}
+            >
+              Crear cuenta
+            </Button>
+          </Box>
+        </Container>
+      </Box>
 
       <Divider />
 
