@@ -26,6 +26,7 @@ import { object, minLength, string, email, pipe, nonEmpty } from 'valibot'
 import classnames from 'classnames'
 import type { SubmitHandler } from 'react-hook-form'
 import type { InferInput } from 'valibot'
+import { OTPInput } from 'input-otp'
 
 // Type Imports
 import type { Mode } from '@core/types'
@@ -44,6 +45,7 @@ import { useSettings } from '@core/hooks/useSettings'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
+import styles from '@/libs/styles/inputOtp.module.css'
 
 type ErrorType = {
   message: string[]
@@ -114,8 +116,8 @@ const Login = ({ mode }: { mode: Mode }) => {
   const onSubmit: SubmitHandler<FormData> = async data => {
     // Step 2: MFA
     if (isMfaStep) {
-      if (!mfaSession || !mfaCode) {
-        setErrorState({ message: ['Ingresa el código MFA.'] })
+      if (!mfaSession || !mfaCode || mfaCode.length < 6) {
+        setErrorState({ message: ['Ingresa el código MFA de 6 dígitos.'] })
 
         return
       }
@@ -239,6 +241,13 @@ const Login = ({ mode }: { mode: Mode }) => {
 
         return
       }
+
+      // Usuario no confirmado
+      if (dataJson?.code === 'UserNotConfirmedException') {
+        setErrorState({ message: [dataJson?.message || 'Usuario no confirmado. Revisa tu correo.'] })
+
+        return
+      }
     }
 
     // Si nada de lo anterior funcionó, muestra error genérico
@@ -283,6 +292,12 @@ const Login = ({ mode }: { mode: Mode }) => {
               <span className='font-medium'>admin</span>
             </Typography>
           </Alert>
+
+          {errorState && (
+            <Alert severity='error' onClose={() => setErrorState(null)}>
+              {errorState.message[0]}
+            </Alert>
+          )}
 
           <form
             noValidate
@@ -351,15 +366,32 @@ const Login = ({ mode }: { mode: Mode }) => {
               )}
             />
             {isMfaStep && (
-              <TextField
-                fullWidth
-                label={`Código MFA${mfaDestination ? ` (${mfaDestination})` : ''}`}
-                value={mfaCode}
-                onChange={e => {
-                  setMfaCode(e.target.value)
-                  errorState !== null && setErrorState(null)
-                }}
-              />
+              <div className='flex flex-col gap-3'>
+                <Typography>{`Código MFA${mfaDestination ? ` (${mfaDestination})` : ''}`}</Typography>
+                <OTPInput
+                  onChange={code => {
+                    setMfaCode(code)
+                    if (errorState) setErrorState(null)
+                  }}
+                  value={mfaCode}
+                  maxLength={6}
+                  containerClassName='flex items-center'
+                  render={({ slots }) => (
+                    <div className='flex items-center justify-between w-full gap-4'>
+                      {slots.slice(0, 6).map((slot, idx) => (
+                        <div key={idx} className={classnames(styles.slot, { [styles.slotActive]: slot.isActive })}>
+                          {slot.char !== null && <div>{slot.char}</div>}
+                          {slot.hasFakeCaret && (
+                            <div className={styles.fakeCaret}>
+                              <div className='w-px h-5 bg-textPrimary' />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                />
+              </div>
             )}
             <div className='flex justify-between items-center flex-wrap gap-x-3 gap-y-1'>
               <FormControlLabel control={<Checkbox defaultChecked />} label='Remember me' />

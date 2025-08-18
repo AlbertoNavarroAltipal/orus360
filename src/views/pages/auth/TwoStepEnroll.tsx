@@ -9,6 +9,9 @@ import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 
 import { OTPInput } from 'input-otp'
 import QRCode from 'qrcode'
@@ -132,6 +135,7 @@ const TwoStepEnroll = ({ mode }: { mode: Mode }) => {
 
     gen()
   }, [otpauth])
+
   const onVerify = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -216,11 +220,48 @@ const TwoStepEnroll = ({ mode }: { mode: Mode }) => {
                     </Typography>
                   </div>
                 ) : (
-                  <TextField fullWidth label='URI TOTP' value={otpauth} InputProps={{ readOnly: true }} />
+                  <TextField
+                    fullWidth
+                    label='URI TOTP'
+                    value={otpauth}
+                    InputProps={{
+                      readOnly: true,
+                      endAdornment: (
+                        <InputAdornment position='end'>
+                          <Tooltip title='Copiar URI'>
+                            <IconButton size='small' onClick={() => navigator.clipboard.writeText(otpauth)}>
+                              <i className='ri-file-copy-line' />
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      )
+                    }}
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden'
+                      }
+                    }}
+                  />
                 )}
-                <Typography variant='body2' className='text-center'>
-                  Si no puedes usar el enlace, agrega manualmente la clave: <b>{secret}</b>
-                </Typography>
+                <TextField
+                  fullWidth
+                  label='Clave manual'
+                  value={secret}
+                  InputProps={{
+                    readOnly: true,
+                    endAdornment: (
+                      <InputAdornment position='end'>
+                        <Tooltip title='Copiar clave'>
+                          <IconButton size='small' onClick={() => navigator.clipboard.writeText(secret)}>
+                            <i className='ri-file-copy-line' />
+                          </IconButton>
+                        </Tooltip>
+                      </InputAdornment>
+                    )
+                  }}
+                />
                 <Form noValidate autoComplete='off' className='flex flex-col gap-5' onSubmit={onVerify}>
                   <div className='flex flex-col gap-2'>
                     <Typography>Ingresa tu código de 6 dígitos</Typography>
