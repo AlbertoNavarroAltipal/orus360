@@ -16,6 +16,7 @@
     "removeI18n": "tsx src/remove-translation-scripts/index.ts"
   },
   "dependencies": {
+    "aws-amplify": "^6.4.1",
     "@auth/prisma-adapter": "2.7.4",
     "@aws-amplify/backend": "^1.16.1",
     "@emoji-mart/data": "1.2.1",
