@@ -49,13 +49,13 @@ const menuItemStyles = (verticalNavOptions: VerticalNavState, theme: Theme): Men
               color: 'var(--mui-palette-primary-contrastText)',
               background:
                 theme.direction === 'ltr'
-                  ? `linear-gradient(270deg, var(--mui-palette-primary-main), ${lighten(
+                  ? `linear-gradient(180deg, var(--mui-palette-primary-main), ${lighten(
                       theme.palette.primary.main,
-                      0.5
+                      0.3
                     )} 100%)`
-                  : `linear-gradient(270deg, ${lighten(
+                  : `linear-gradient(180deg, ${lighten(
                       theme.palette.primary.main,
-                      0.5
+                      0.3
                     )}, var(--mui-palette-primary-main) 100%)`,
               [`& .${menuClasses.icon}`]: {
                 color: 'inherit'
