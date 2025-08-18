@@ -25,7 +25,6 @@ import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { alpha, lighten, useTheme } from '@mui/material/styles'
 import Chip from '@mui/material/Chip'
-import Avatar from '@mui/material/Avatar'
 import useMediaQuery from '@mui/material/useMediaQuery'
 
 // Hooks
@@ -54,6 +53,11 @@ export default function SuperAppLanding() {
     '/images/Altipal/logo_orus_azul_fondo_transparente_sin_texto.png',
     '/images/Altipal/logo_orus_blanco_fondo_transparente.png'
   )
+
+  const productImageSrc =
+    theme.palette.mode === 'light'
+      ? '/images/front-pages/landing-page/hero-dashboard-light.png'
+      : '/images/front-pages/landing-page/hero-dashboard-dark.png'
 
   // Estado simple para "Crear ticket"
   const [nombre, setNombre] = useState('')
@@ -141,8 +145,18 @@ export default function SuperAppLanding() {
           textAlign: 'center',
           pt: { xs: 14, md: 18 },
           pb: { xs: 10, md: 14 },
-          backgroundImage: `radial-gradient(800px 400px at -10% -10%, ${alpha(theme.palette.primary.main, 0.15)}, transparent 60%),
-            radial-gradient(800px 400px at 110% -10%, ${alpha(theme.palette.primary.dark, 0.12)}, transparent 60%)`
+          backgroundImage:
+            theme.palette.mode === 'light'
+              ? `linear-gradient(${alpha(theme.palette.background.default, 0.6)}, ${alpha(
+                  theme.palette.background.default,
+                  0.6
+                )}), url(/images/front-pages/landing-page/hero-bg-light.png)`
+              : `linear-gradient(${alpha(theme.palette.background.default, 0.5)}, ${alpha(
+                  theme.palette.background.default,
+                  0.5
+                )}), url(/images/front-pages/landing-page/hero-bg-dark.png)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
         })}
       >
         <Container maxWidth='lg'>
@@ -183,24 +197,6 @@ export default function SuperAppLanding() {
         </Container>
       </Box>
 
-      {/* Barra de confianza (logos) */}
-      <Container maxWidth='lg' sx={{ py: 4 }}>
-        <Grid container spacing={3} alignItems='center' justifyContent='center'>
-          {[
-            '/images/logos/google.png',
-            '/images/logos/github.png',
-            '/images/logos/slack.png',
-            '/images/logos/stripe.png',
-            '/images/logos/aws.png'
-          ].map((src, i) => (
-            <Grid key={i} item xs={6} sm='auto'>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt='logo confianza' height={22} style={{ opacity: 0.7 }} />
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
-
       {/* ¿Qué es? */}
       <Container id='que-es' sx={{ py: { xs: 8, md: 12 } }} maxWidth='lg'>
         <Grid container spacing={8} alignItems='center'>
@@ -226,22 +222,20 @@ export default function SuperAppLanding() {
                 </Stack>
               ))}
             </Stack>
+            <Stack direction='row' spacing={1} sx={{ mt: 3, flexWrap: 'wrap' }}>
+              <Chip label='Implementación rápida' size='small' variant='outlined' />
+              <Chip label='APIs abiertas' size='small' variant='outlined' />
+              <Chip label='Seguridad MFA/SSO' size='small' variant='outlined' />
+            </Stack>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Card
-              sx={theme => ({
-                p: 4,
-                textAlign: 'center',
-                border: settings.skin === 'bordered' ? `1px solid ${theme.palette.divider}` : undefined,
-                boxShadow: settings.skin === 'bordered' ? 'none' : undefined
-              })}
-              elevation={settings.skin === 'bordered' ? 0 : 3}
-            >
+            <Card elevation={0} sx={theme => ({ p: 1.5, border: `1px solid ${theme.palette.divider}` })}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoSrc} alt='ORUS 360' height={80} />
-              <Typography variant='subtitle1' sx={{ mt: 2 }}>
-                Una sola plataforma. Todo tu negocio.
-              </Typography>
+              <img
+                src={productImageSrc}
+                alt='Vista previa ORUS 360'
+                style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 12 }}
+              />
             </Card>
           </Grid>
         </Grid>
@@ -253,7 +247,7 @@ export default function SuperAppLanding() {
           Características principales
         </Typography>
         <Typography variant='body1' align='center' color='text.secondary' paragraph>
-          Módulos listos para usar y extensibles vía APIs.
+          Módulos listos para usar, seguros y extensibles vía APIs.
         </Typography>
 
         <Grid container spacing={4} sx={{ mt: 4 }}>
@@ -295,15 +289,14 @@ export default function SuperAppLanding() {
                   p: 4,
                   textAlign: 'center',
                   height: '100%',
-                  border: settings.skin === 'bordered' ? `1px solid ${theme.palette.divider}` : 'none',
+                  border: `1px solid ${theme.palette.divider}`,
                   transition: 'transform .2s ease, box-shadow .2s ease',
                   '&:hover': {
                     transform: 'translateY(-4px)',
-                    boxShadow:
-                      settings.skin === 'bordered' ? `0 8px 24px ${alpha(theme.palette.common.black, 0.08)}` : undefined
+                    boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.08)}`
                   }
                 })}
-                elevation={settings.skin === 'bordered' ? 0 : 2}
+                elevation={0}
               >
                 <Box
                   sx={theme => ({
@@ -325,6 +318,9 @@ export default function SuperAppLanding() {
                 <Typography variant='body2' color='text.secondary'>
                   {f.desc}
                 </Typography>
+                <Button size='small' sx={{ mt: 2 }} component={Link} href='#contacto'>
+                  Más info
+                </Button>
               </Card>
             </Grid>
           ))}
@@ -366,9 +362,16 @@ export default function SuperAppLanding() {
         <Typography variant='h4' align='center' gutterBottom>
           Preguntas frecuentes
         </Typography>
+        <Typography variant='body1' align='center' color='text.secondary' sx={{ mb: 4 }}>
+          Respuestas rápidas a dudas comunes sobre implementación, seguridad y personalización.
+        </Typography>
         <Grid container spacing={4} sx={{ mt: 1 }}>
           <Grid item xs={12} md={8} sx={{ mx: 'auto' }}>
-            <Accordion defaultExpanded>
+            <Accordion
+              defaultExpanded
+              disableGutters
+              sx={theme => ({ mb: 2, borderRadius: 2, border: `1px solid ${theme.palette.divider}` })}
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography fontWeight={600}>¿ORUS 360 reemplaza mis sistemas actuales?</Typography>
               </AccordionSummary>
@@ -379,7 +382,10 @@ export default function SuperAppLanding() {
                 </Typography>
               </AccordionDetails>
             </Accordion>
-            <Accordion>
+            <Accordion
+              disableGutters
+              sx={theme => ({ mb: 2, borderRadius: 2, border: `1px solid ${theme.palette.divider}` })}
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography fontWeight={600}>¿Cómo funciona la seguridad y el acceso?</Typography>
               </AccordionSummary>
@@ -390,7 +396,10 @@ export default function SuperAppLanding() {
                 </Typography>
               </AccordionDetails>
             </Accordion>
-            <Accordion>
+            <Accordion
+              disableGutters
+              sx={theme => ({ mb: 2, borderRadius: 2, border: `1px solid ${theme.palette.divider}` })}
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography fontWeight={600}>¿Puedo personalizar módulos?</Typography>
               </AccordionSummary>
@@ -401,55 +410,18 @@ export default function SuperAppLanding() {
                 </Typography>
               </AccordionDetails>
             </Accordion>
+            <Accordion disableGutters sx={theme => ({ borderRadius: 2, border: `1px solid ${theme.palette.divider}` })}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography fontWeight={600}>¿Cuál es el tiempo típico de implementación?</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography color='text.secondary'>
+                  Dependiendo del alcance, puedes iniciar en semanas con módulos base y expandir gradualmente con
+                  integraciones a tus sistemas actuales.
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
           </Grid>
-        </Grid>
-      </Container>
-
-      {/* Testimonios */}
-      <Container id='testimonios' maxWidth='lg' sx={{ py: { xs: 8, md: 12 } }}>
-        <Typography variant='h4' align='center' gutterBottom>
-          Lo que dicen nuestros usuarios
-        </Typography>
-        <Grid container spacing={4} sx={{ mt: 1 }}>
-          {[
-            {
-              name: 'María Gómez',
-              role: 'Operaciones',
-              text: 'Centralizamos procesos y aceleramos despliegues. El equipo adoptó ORUS 360 en semanas.'
-            },
-            {
-              name: 'Juan Pérez',
-              role: 'TI',
-              text: 'Integraciones limpias y seguridad sólida. La gobernanza por rol nos dio tranquilidad.'
-            },
-            {
-              name: 'Laura Martínez',
-              role: 'Logística',
-              text: 'Mejor visibilidad y menos fricción entre áreas. El flujo de trabajo es claro y medible.'
-            }
-          ].map((t, i) => (
-            <Grid key={i} item xs={12} md={4}>
-              <Card
-                elevation={settings.skin === 'bordered' ? 0 : 1}
-                sx={theme => ({
-                  height: '100%',
-                  p: 3,
-                  border: settings.skin === 'bordered' ? `1px solid ${theme.palette.divider}` : undefined
-                })}
-              >
-                <Typography color='text.secondary'>“{t.text}”</Typography>
-                <Stack direction='row' spacing={2} alignItems='center' sx={{ mt: 3 }}>
-                  <Avatar>{t.name.charAt(0)}</Avatar>
-                  <Box>
-                    <Typography variant='subtitle2'>{t.name}</Typography>
-                    <Typography variant='caption' color='text.secondary'>
-                      {t.role}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Card>
-            </Grid>
-          ))}
         </Grid>
       </Container>
 
@@ -526,29 +498,57 @@ export default function SuperAppLanding() {
       {/* CTA final */}
       <Box
         sx={theme => ({
-          textAlign: 'center',
           py: { xs: 8, md: 12 },
-          backgroundImage: `radial-gradient(800px 400px at 50% 120%, ${alpha(theme.palette.primary.main, 0.12)}, transparent 60%)`
+          backgroundImage:
+            theme.palette.mode === 'light'
+              ? `linear-gradient(${alpha(theme.palette.background.default, 0.6)}, ${alpha(
+                  theme.palette.background.default,
+                  0.6
+                )}), url(/images/front-pages/landing-page/get-started-bg.png)`
+              : `linear-gradient(${alpha(theme.palette.background.default, 0.6)}, ${alpha(
+                  theme.palette.background.default,
+                  0.6
+                )}), url(/images/front-pages/landing-page/get-started-bg.png)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
         })}
       >
         <Container id='cta' maxWidth='lg'>
-          <Typography variant='h4' gutterBottom>
-            ¿Listo para empezar?
-          </Typography>
-          <Typography variant='body1' color='text.secondary'>
-            Crea tu cuenta o inicia sesión para explorar ORUS 360.
-          </Typography>
-          <Box sx={{ mt: 3 }}>
-            <Button variant='contained' color='primary' onClick={handleCognitoLogin}>
-              Iniciar sesión en ORUS
-            </Button>
-            <Button
-              href='https://us-east-1s5gznopkq.auth.us-east-1.amazoncognito.com/signup?client_id=5535e1dvldtrr2logi6sqfvkr6&code_challenge=0En9ycDofEFN2lHZGPTc751xoWMtEj23SHOCIq_dGek&code_challenge_method=S256&lang=es&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fcognito&response_type=code&scope=openid+email+profile&state=9LLxIGer2oFI1W_1XVJN_CeMyxeG-ErAxTsCNCJz5Vw'
-              variant='outlined'
-              sx={{ ml: 2 }}
-            >
-              Crear cuenta
-            </Button>
+          <Box
+            sx={theme => ({
+              maxWidth: 900,
+              mx: 'auto',
+              textAlign: 'center',
+              px: { xs: 3, md: 6 },
+              py: { xs: 5, md: 6 },
+              borderRadius: 3,
+              border: `1px solid ${theme.palette.divider}`,
+              backgroundColor: alpha(theme.palette.background.paper, 0.7),
+              backdropFilter: 'saturate(180%) blur(6px)'
+            })}
+          >
+            <Stack alignItems='center' spacing={1} sx={{ mb: 1 }}>
+              <Chip label='Sin costo de instalación' size='small' variant='outlined' />
+              <Chip label='Soporte 24/7' size='small' variant='outlined' />
+            </Stack>
+            <Typography variant='h4' gutterBottom>
+              ¿Listo para empezar?
+            </Typography>
+            <Typography variant='body1' color='text.secondary'>
+              Crea tu cuenta o inicia sesión y descubre cómo ORUS 360 puede centralizar tus operaciones.
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent='center' sx={{ mt: 3 }}>
+              <Button variant='contained' color='primary' onClick={handleCognitoLogin} startIcon={<LoginIcon />}>
+                Iniciar sesión en ORUS
+              </Button>
+              <Button
+                href='https://us-east-1s5gznopkq.auth.us-east-1.amazoncognito.com/signup?client_id=5535e1dvldtrr2logi6sqfvkr6&code_challenge=0En9ycDofEFN2lHZGPTc751xoWMtEj23SHOCIq_dGek&code_challenge_method=S256&lang=es&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fcognito&response_type=code&scope=openid+email+profile&state=9LLxIGer2oFI1W_1XVJN_CeMyxeG-ErAxTsCNCJz5Vw'
+                variant='outlined'
+                startIcon={<RocketLaunchIcon />}
+              >
+                Crear cuenta
+              </Button>
+            </Stack>
           </Box>
         </Container>
       </Box>
