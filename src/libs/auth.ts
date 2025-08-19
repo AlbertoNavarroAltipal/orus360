@@ -122,20 +122,20 @@ const upsertCognitoUserFromGoogle = async (profile: any, account?: any) => {
 
     await client.send(createCmd)
 
-    // Opcional: establecer contraseña temporal para permitir NEW_PASSWORD_REQUIRED
+    // Establecer contraseña permanente aleatoria para evitar FORCE_CHANGE_PASSWORD
     try {
-      const tempPass = Math.random().toString(36).slice(2) + 'A9!a'
+      const tempPass = `${Math.random().toString(36).slice(2)}A9!${Math.random().toString(36).slice(2)}`
 
       const setPassCmd = new AdminSetUserPasswordCommand({
         UserPoolId: userPoolId,
         Username: email,
         Password: tempPass,
-        Permanent: false
+        Permanent: true
       })
 
       await client.send(setPassCmd)
     } catch {
-      // Si la política no permite setear password, ignorar
+      // Ignorar si la política no permite setear password
     }
   } else {
     // Actualizar atributos existentes con datos de Google como fuente de verdad
@@ -146,6 +146,24 @@ const upsertCognitoUserFromGoogle = async (profile: any, account?: any) => {
     })
 
     await client.send(updateCmd)
+
+    // Si quedó en FORCE_CHANGE_PASSWORD, establecer contraseña permanente para pasarlo a CONFIRMED
+    if (existing.UserStatus === 'FORCE_CHANGE_PASSWORD') {
+      try {
+        const tempPass = `${Math.random().toString(36).slice(2)}A9!${Math.random().toString(36).slice(2)}`
+
+        const setPassCmd = new AdminSetUserPasswordCommand({
+          UserPoolId: userPoolId,
+          Username: existing.Username as string,
+          Password: tempPass,
+          Permanent: true
+        })
+
+        await client.send(setPassCmd)
+      } catch {
+        // no-op
+      }
+    }
   }
 }
 
