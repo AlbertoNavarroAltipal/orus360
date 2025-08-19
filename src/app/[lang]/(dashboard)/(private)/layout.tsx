@@ -12,6 +12,7 @@ import HorizontalLayout from '@layouts/HorizontalLayout'
 
 // Component Imports
 import Providers from '@components/Providers'
+import MuiXLicense from '@/components/MuiXLicense'
 import Navigation from '@components/layout/vertical/Navigation'
 import Header from '@components/layout/horizontal/Header'
 import Navbar from '@components/layout/vertical/Navbar'
@@ -41,6 +42,8 @@ const Layout = async (props: ChildrenType & { params: Promise<{ lang: Locale }> 
 
   return (
     <Providers direction={direction}>
+      {/* Ensure MUI X license is set on the client before premium components mount */}
+      <MuiXLicense />
       <AuthGuard locale={params.lang}>
         <LayoutWrapper
           systemMode={systemMode}
