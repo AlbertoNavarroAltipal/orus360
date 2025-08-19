@@ -6,7 +6,11 @@ import GoogleProvider from 'next-auth/providers/google'
 import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
-  RespondToAuthChallengeCommand
+  RespondToAuthChallengeCommand,
+  ListUsersCommand,
+  AdminCreateUserCommand,
+  AdminUpdateUserAttributesCommand,
+  AdminSetUserPasswordCommand
 } from '@aws-sdk/client-cognito-identity-provider'
 
 const decodeJwt = (token: string) => {
@@ -15,6 +19,134 @@ const decodeJwt = (token: string) => {
   const json = Buffer.from(b64, 'base64').toString('utf-8')
 
   return JSON.parse(json)
+}
+
+// Upsert de usuario en Cognito a partir del perfil de Google
+const upsertCognitoUserFromGoogle = async (profile: any, account?: any) => {
+  const email: string | undefined = profile?.email
+
+  if (!email) return
+
+  // Region & UserPoolId
+  const region = process.env.AWS_REGION || process.env.NEXT_PUBLIC_AWS_REGION
+  let userPoolId = process.env.COGNITO_USER_POOL_ID as string | undefined
+
+  if (!region || !userPoolId) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fallback = require('../../amplify_outputs.json')
+
+      userPoolId = userPoolId || fallback?.auth?.user_pool_id
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!region || !userPoolId) return
+
+  const client = new CognitoIdentityProviderClient({ region })
+
+  // Buscar por email
+  const listCmd = new ListUsersCommand({
+    UserPoolId: userPoolId,
+    Filter: `email = \"${email}\"`
+  })
+
+  const listRes = await client.send(listCmd)
+  const existing = listRes.Users && listRes.Users[0]
+
+  // Mapear atributos desde Google (usar lo disponible por scopes actuales)
+  const attrs: { Name: string; Value: string }[] = []
+
+  const pushIf = (name: string, val?: any) => {
+    if (typeof val === 'undefined' || val === null) return
+
+    const str = typeof val === 'string' ? val : String(val)
+
+    attrs.push({ Name: name, Value: str })
+  }
+
+  pushIf('email', profile?.email)
+  pushIf('email_verified', profile?.email_verified ? 'true' : 'false')
+  pushIf('name', profile?.name)
+  pushIf('given_name', profile?.given_name)
+  pushIf('family_name', profile?.family_name)
+  pushIf('picture', profile?.picture)
+
+  // Intentar enriquecer con Google People API si hay access_token y scopes
+  try {
+    const accessToken = account?.access_token
+
+    if (accessToken) {
+      const resp = await fetch(
+        'https://people.googleapis.com/v1/people/me?personFields=genders,birthdays,phoneNumbers',
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      )
+
+      if (resp.ok) {
+        const people: any = await resp.json()
+        const genderVal = people?.genders?.[0]?.value
+        const phoneVal = people?.phoneNumbers?.[0]?.value
+        const b = people?.birthdays?.[0]?.date
+
+        const birthdate =
+          b && b.year && b.month && b.day
+            ? `${b.year}-${String(b.month).padStart(2, '0')}-${String(b.day).padStart(2, '0')}`
+            : undefined
+
+        pushIf('gender', genderVal)
+        pushIf('phone_number', phoneVal)
+        pushIf('birthdate', birthdate)
+      }
+    }
+  } catch {
+    // Ignorar fallo de People API
+  }
+
+  // Datos sensibles que requieren scopes adicionales: gender, birthdate, phone_number
+  // pushIf('gender', profile?.gender)
+  // pushIf('birthdate', profile?.birthdate)
+  // pushIf('phone_number', profile?.phone_number)
+  // preferred_username con el sub de Google
+
+  pushIf('preferred_username', profile?.sub)
+
+  if (!existing) {
+    // Crear usuario con Username = email, sin enviar invitación
+    const createCmd = new AdminCreateUserCommand({
+      UserPoolId: userPoolId,
+      Username: email,
+      MessageAction: 'SUPPRESS',
+      UserAttributes: attrs
+    })
+
+    await client.send(createCmd)
+
+    // Opcional: establecer contraseña temporal para permitir NEW_PASSWORD_REQUIRED
+    try {
+      const tempPass = Math.random().toString(36).slice(2) + 'A9!a'
+
+      const setPassCmd = new AdminSetUserPasswordCommand({
+        UserPoolId: userPoolId,
+        Username: email,
+        Password: tempPass,
+        Permanent: false
+      })
+
+      await client.send(setPassCmd)
+    } catch {
+      // Si la política no permite setear password, ignorar
+    }
+  } else {
+    // Actualizar atributos existentes con datos de Google como fuente de verdad
+    const updateCmd = new AdminUpdateUserAttributesCommand({
+      UserPoolId: userPoolId,
+      Username: existing.Username as string,
+      UserAttributes: attrs
+    })
+
+    await client.send(updateCmd)
+  }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -265,7 +397,12 @@ export const authOptions: NextAuthOptions = {
 
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      authorization: {
+        params: {
+          scope: process.env.GOOGLE_SCOPES || 'openid email profile'
+        }
+      }
     })
 
     // (Hosted UI Google removed per request to avoid redirects)
@@ -294,6 +431,15 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (account && profile) {
+        // Si viene de Google, sincroniza/crea el usuario en Cognito con datos de Google como fuente de verdad
+        if (account.provider === 'google') {
+          try {
+            await upsertCognitoUserFromGoogle(profile, account)
+          } catch {
+            // no-op
+          }
+        }
+
         token.access_token = (account as any).access_token
         token.id_token = (account as any).id_token
         token.expires_at = (account as any).expires_at
