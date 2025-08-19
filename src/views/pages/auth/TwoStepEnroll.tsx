@@ -12,6 +12,7 @@ import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
+import Alert from '@mui/material/Alert'
 
 import { OTPInput } from 'input-otp'
 import QRCode from 'qrcode'
@@ -154,7 +155,12 @@ const TwoStepEnroll = ({ mode }: { mode: Mode }) => {
       const verifyJson = await verify.json().catch(() => null)
 
       if (!verify.ok || !verifyJson?.session) {
-        setError(verifyJson?.message || 'Código TOTP inválido')
+        const friendly =
+          verifyJson?.code === 'EnableSoftwareTokenMFAException'
+            ? 'Código TOTP incorrecto. Intenta de nuevo.'
+            : verifyJson?.message || 'Código TOTP inválido'
+
+        setError(friendly)
 
         return
       }
@@ -289,11 +295,7 @@ const TwoStepEnroll = ({ mode }: { mode: Mode }) => {
                   <Button fullWidth variant='contained' type='submit' disabled={loading}>
                     Verificar TOTP
                   </Button>
-                  {error && (
-                    <Typography color='error.main' variant='body2'>
-                      {error}
-                    </Typography>
-                  )}
+                  {error && <Alert severity='error'>{error}</Alert>}
                 </Form>
               </>
             ) : (

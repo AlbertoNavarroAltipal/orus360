@@ -172,16 +172,16 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
+        email: { label: 'Correo electrónico', type: 'email' },
+        password: { label: 'Contraseña', type: 'password' },
 
         // Extra fields for MFA second-step
-        mfaCode: { label: 'MFA Code', type: 'text' },
-        mfaType: { label: 'MFA Type', type: 'text' },
-        session: { label: 'Session', type: 'text' },
+        mfaCode: { label: 'Código MFA', type: 'text' },
+        mfaType: { label: 'Tipo de MFA', type: 'text' },
+        session: { label: 'Sesión', type: 'text' },
 
         // Complete MFA setup (TOTP): session from VerifySoftwareToken
-        completeMfaSetupSession: { label: 'Complete MFA Setup Session', type: 'text' }
+        completeMfaSetupSession: { label: 'Sesión para completar configuración MFA', type: 'text' }
       },
       authorize: async credentials => {
         const email = (credentials?.email as string) || undefined
@@ -255,7 +255,7 @@ export const authOptions: NextAuthOptions = {
 
             return {
               id: sub,
-              name: name || preferred_username || email || 'User',
+              name: name || preferred_username || email || 'Usuario',
               email,
               idToken: result.IdToken,
               accessToken: result.AccessToken,
@@ -298,7 +298,7 @@ export const authOptions: NextAuthOptions = {
 
             return {
               id: sub,
-              name: name || preferred_username || email || 'User',
+              name: name || preferred_username || email || 'Usuario',
               email,
               idToken: setupResult.IdToken,
               accessToken: setupResult.AccessToken,
@@ -377,7 +377,7 @@ export const authOptions: NextAuthOptions = {
 
           return {
             id: sub,
-            name: name || preferred_username || emailClaim || email || 'User',
+            name: name || preferred_username || emailClaim || email || 'Usuario',
             email: emailClaim || email,
             idToken: result.IdToken,
             accessToken: result.AccessToken,
