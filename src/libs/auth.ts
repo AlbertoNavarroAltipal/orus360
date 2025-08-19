@@ -446,6 +446,29 @@ export const authOptions: NextAuthOptions = {
         if (u?.idToken) token.id_token = u.idToken
         if (u?.accessToken) token.access_token = u.accessToken
         if (u?.expiresAt) token.expires_at = u.expiresAt
+
+        // Para logins con credenciales (Cognito), decodificar IdToken y volcar claims al token
+        try {
+          const rawIdToken = u?.idToken || token.id_token
+
+          if (rawIdToken) {
+            const claims: any = decodeJwt(String(rawIdToken))
+
+            token.userId = claims?.sub
+            if (claims?.email) token.email = claims.email
+            if (typeof claims?.email_verified !== 'undefined') token.email_verified = claims.email_verified
+            if (claims?.given_name) token.given_name = claims.given_name
+            if (claims?.family_name) token.family_name = claims.family_name
+            if (claims?.picture) token.picture = claims.picture
+            if (claims?.phone_number) token.phone_number = claims.phone_number
+            if (typeof claims?.preferred_username !== 'undefined') token.preferred_username = claims.preferred_username
+            if (Array.isArray(claims?.['cognito:groups'])) token.cognito_groups = claims['cognito:groups']
+          }
+        } catch {
+          // ignorar errores de decodificación
+        }
+
+        if (!account && !token.provider) token.provider = 'credentials'
       }
 
       if (account && profile) {
@@ -462,12 +485,20 @@ export const authOptions: NextAuthOptions = {
         token.id_token = (account as any).id_token
         token.expires_at = (account as any).expires_at
 
+        token.provider = account.provider
+
         const p: any = profile
 
+        if (typeof p?.email !== 'undefined') token.email = p.email
         if (typeof p?.email_verified !== 'undefined') token.email_verified = p.email_verified
         if (typeof p?.phone_number !== 'undefined') token.phone_number = p.phone_number
         if (Array.isArray(p?.['cognito:groups'])) token.cognito_groups = p['cognito:groups']
         if (typeof p?.preferred_username !== 'undefined') token.preferred_username = p.preferred_username
+
+        if (typeof p?.given_name !== 'undefined') token.given_name = p.given_name
+        if (typeof p?.family_name !== 'undefined') token.family_name = p.family_name
+        if (typeof p?.picture !== 'undefined') token.picture = p.picture
+        if (typeof p?.sub !== 'undefined') token.userId = p.sub
       }
 
       return token
@@ -475,10 +506,20 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.name = token.name
-        session.user.emailVerified = token.email_verified
-        session.user.phoneNumber = token.phone_number
-        session.user.cognitoGroups = token.cognito_groups
-        session.user.preferredUsername = token.preferred_username
+
+        // Atributos comunes
+        ;(session.user as any).id = (token as any).userId || (token as any).sub
+        session.user.email = (token as any).email || session.user.email
+        ;(session.user as any).provider = (token as any).provider
+
+        // Enriquecidos
+        ;(session.user as any).givenName = (token as any).given_name
+        ;(session.user as any).familyName = (token as any).family_name
+        ;(session.user as any).picture = (token as any).picture
+        session.user.emailVerified = (token as any).email_verified
+        session.user.phoneNumber = (token as any).phone_number
+        session.user.cognitoGroups = (token as any).cognito_groups
+        session.user.preferredUsername = (token as any).preferred_username
       }
 
       return session
