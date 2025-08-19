@@ -6,7 +6,8 @@ const staticMenuFiles = [
   'src/components/layout/horizontal/HorizontalMenu.tsx'
 ]
 
-const menuDataFiles = ['src/data/navigation/verticalMenuData.tsx', 'src/data/navigation/horizontalMenuData.tsx']
+// Con la unificación de los datos de menú en MenuData.tsx, solo queda un archivo
+const menuDataFiles = ['src/data/navigation/MenuData.tsx']
 
 const removeTranslationInNavigation = async (path: string) => {
   consola.start('Removing translation in navigation files...')
