@@ -20,6 +20,11 @@ import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import MenuItem from '@mui/material/MenuItem'
 import Button from '@mui/material/Button'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogActions from '@mui/material/DialogActions'
 
 // Third-party Imports
 import { signOut, useSession } from 'next-auth/react'
@@ -46,6 +51,7 @@ const BadgeContentSpan = styled('span')({
 const UserDropdown = () => {
   // States
   const [open, setOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   // Refs
   const anchorRef = useRef<HTMLDivElement>(null)
@@ -72,15 +78,24 @@ const UserDropdown = () => {
     setOpen(false)
   }
 
-  const handleUserLogout = async () => {
+  // Abrir diálogo de confirmación de cierre de sesión
+  const handleOpenLogoutDialog = () => {
+    setOpen(false)
+    setConfirmOpen(true)
+  }
+
+  // Cerrar diálogo sin cerrar sesión
+  const handleCloseLogoutDialog = () => setConfirmOpen(false)
+
+  // Confirmar cierre de sesión
+  const handleConfirmLogout = async () => {
     try {
-      // Sign out from the app
+      setConfirmOpen(false)
       await signOut({ callbackUrl: process.env.NEXT_PUBLIC_APP_URL })
     } catch (error) {
       console.error(error)
 
-      // Show above error in a toast like following
-      // toastService.error((err as Error).message)
+      // Aquí podrías mostrar un toast con el error
     }
   }
 
@@ -152,10 +167,10 @@ const UserDropdown = () => {
                       color='error'
                       size='small'
                       endIcon={<i className='ri-logout-box-r-line' />}
-                      onClick={handleUserLogout}
+                      onClick={handleOpenLogoutDialog}
                       sx={{ '& .MuiButton-endIcon': { marginInlineStart: 1.5 } }}
                     >
-                      Logout
+                      Cerrar sesión
                     </Button>
                   </div>
                 </MenuList>
@@ -164,6 +179,20 @@ const UserDropdown = () => {
           </Fade>
         )}
       </Popper>
+      <Dialog open={confirmOpen} onClose={handleCloseLogoutDialog} aria-labelledby='logout-dialog-title'>
+        <DialogTitle id='logout-dialog-title'>Confirmar cierre de sesión</DialogTitle>
+        <DialogContent>
+          <DialogContentText>¿Estás seguro de que deseas cerrar sesión?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseLogoutDialog} variant='text'>
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirmLogout} variant='contained' color='error' autoFocus>
+            Cerrar sesión
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }
