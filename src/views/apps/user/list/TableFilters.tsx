@@ -35,38 +35,38 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
       <Grid container spacing={5}>
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormControl fullWidth>
-            <InputLabel id='role-select'>Select Role</InputLabel>
+            <InputLabel id='role-select'>Selecciona rol</InputLabel>
             <Select
               fullWidth
               id='select-role'
               value={role}
               onChange={e => setRole(e.target.value)}
-              label='Select Role'
+              label='Selecciona rol'
               labelId='role-select'
-              inputProps={{ placeholder: 'Select Role' }}
+              inputProps={{ placeholder: 'Selecciona rol' }}
             >
-              <MenuItem value=''>Select Role</MenuItem>
-              <MenuItem value='admin'>Admin</MenuItem>
-              <MenuItem value='author'>Author</MenuItem>
+              <MenuItem value=''>Selecciona rol</MenuItem>
+              <MenuItem value='admin'>Administrador</MenuItem>
+              <MenuItem value='author'>Autor</MenuItem>
               <MenuItem value='editor'>Editor</MenuItem>
-              <MenuItem value='maintainer'>Maintainer</MenuItem>
-              <MenuItem value='subscriber'>Subscriber</MenuItem>
+              <MenuItem value='maintainer'>Mantenedor</MenuItem>
+              <MenuItem value='subscriber'>Suscriptor</MenuItem>
             </Select>
           </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormControl fullWidth>
-            <InputLabel id='plan-select'>Select Plan</InputLabel>
+            <InputLabel id='plan-select'>Selecciona plan</InputLabel>
             <Select
               fullWidth
               id='select-plan'
               value={plan}
               onChange={e => setPlan(e.target.value)}
-              label='Select Plan'
+              label='Selecciona plan'
               labelId='plan-select'
-              inputProps={{ placeholder: 'Select Plan' }}
+              inputProps={{ placeholder: 'Selecciona plan' }}
             >
-              <MenuItem value=''>Select Plan</MenuItem>
+              <MenuItem value=''>Selecciona plan</MenuItem>
               <MenuItem value='basic'>Basic</MenuItem>
               <MenuItem value='company'>Company</MenuItem>
               <MenuItem value='enterprise'>Enterprise</MenuItem>
@@ -76,20 +76,20 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormControl fullWidth>
-            <InputLabel id='status-select'>Select Status</InputLabel>
+            <InputLabel id='status-select'>Selecciona estado</InputLabel>
             <Select
               fullWidth
               id='select-status'
-              label='Select Status'
+              label='Selecciona estado'
               value={status}
               onChange={e => setStatus(e.target.value)}
               labelId='status-select'
-              inputProps={{ placeholder: 'Select Status' }}
+              inputProps={{ placeholder: 'Selecciona estado' }}
             >
-              <MenuItem value=''>Select Status</MenuItem>
-              <MenuItem value='pending'>Pending</MenuItem>
-              <MenuItem value='active'>Active</MenuItem>
-              <MenuItem value='inactive'>Inactive</MenuItem>
+              <MenuItem value=''>Selecciona estado</MenuItem>
+              <MenuItem value='pending'>Pendiente</MenuItem>
+              <MenuItem value='active'>Activo</MenuItem>
+              <MenuItem value='inactive'>Inactivo</MenuItem>
             </Select>
           </FormControl>
         </Grid>

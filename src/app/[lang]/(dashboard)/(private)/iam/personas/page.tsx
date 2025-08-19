@@ -23,7 +23,7 @@ import { getUserData } from '@/app/server/actions'
 } */
 
 const UserListApp = async () => {
-  // Vars
+  // Obtenemos usuarios desde AWS Cognito (server action) con fallback a fake-db
   const data = await getUserData()
 
   return <UserList userData={data} />

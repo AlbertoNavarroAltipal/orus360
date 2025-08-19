@@ -3,15 +3,17 @@ import type { ThemeColor } from '@core/types'
 
 export type UsersType = {
   id: number
-  role: string
+
+  // Rol/plan se usan en UI; pueden no existir en Cognito, por eso opcionales
+  role?: string
   email: string
-  status: string
-  avatar: string
-  company: string
-  country: string
-  contact: string
+  status: 'active' | 'pending' | 'inactive' | string
+  avatar?: string
+  company?: string
+  country?: string
+  contact?: string
   fullName: string
   username: string
-  currentPlan: string
+  currentPlan?: string
   avatarColor?: ThemeColor
 }

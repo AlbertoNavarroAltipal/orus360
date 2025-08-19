@@ -177,7 +177,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       },
       columnHelper.accessor('fullName', {
-        header: 'User',
+        header: 'Usuario',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
@@ -191,19 +191,29 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('email', {
-        header: 'Email',
+        header: 'Correo',
         cell: ({ row }) => <Typography>{row.original.email}</Typography>
       }),
       columnHelper.accessor('role', {
-        header: 'Role',
+        header: 'Rol',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
-            <Icon
-              className={userRoleObj[row.original.role].icon}
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
+            {row.original.role && userRoleObj[row.original.role] ? (
+              <Icon
+                className={userRoleObj[row.original.role].icon}
+                sx={{
+                  color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`,
+                  fontSize: '1.375rem'
+                }}
+              />
+            ) : (
+              <Icon
+                className='ri-user-3-line'
+                sx={{ fontSize: '1.375rem', color: 'var(--mui-palette-text-secondary)' }}
+              />
+            )}
             <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
+              {row.original.role || '—'}
             </Typography>
           </div>
         )
@@ -217,21 +227,24 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         )
       }),
       columnHelper.accessor('status', {
-        header: 'Status',
+        header: 'Estado',
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
             <Chip
               variant='tonal'
-              label={row.original.status}
+              label={
+                { active: 'activo', pending: 'pendiente', inactive: 'inactivo' }[row.original.status] ||
+                row.original.status
+              }
               size='small'
-              color={userStatusObj[row.original.status]}
+              color={userStatusObj[row.original.status] || 'secondary'}
               className='capitalize'
             />
           </div>
         )
       }),
       columnHelper.accessor('action', {
-        header: 'Action',
+        header: 'Acciones',
         cell: ({ row }) => (
           <div className='flex items-center'>
             <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
@@ -247,12 +260,12 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
               iconClassName='text-textSecondary'
               options={[
                 {
-                  text: 'Download',
+                  text: 'Descargar',
                   icon: 'ri-download-line',
                   menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
                 },
                 {
-                  text: 'Edit',
+                  text: 'Editar',
                   icon: 'ri-edit-box-line',
                   menuItemProps: { className: 'flex items-center gap-2 text-textSecondary' }
                 }
@@ -313,7 +326,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   return (
     <>
       <Card>
-        <CardHeader title='Filters' />
+        <CardHeader title='Filtros' />
         <TableFilters setData={setFilteredData} tableData={data} />
         <Divider />
         <div className='flex justify-between p-5 gap-4 flex-col items-start sm:flex-row sm:items-center'>
@@ -323,17 +336,17 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
             startIcon={<i className='ri-upload-2-line text-xl' />}
             className='max-sm:is-full'
           >
-            Export
+            Exportar
           </Button>
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
-              placeholder='Search User'
+              placeholder='Buscar usuario'
               className='max-sm:is-full'
             />
             <Button variant='contained' onClick={() => setAddUserOpen(!addUserOpen)} className='max-sm:is-full'>
-              Add New User
+              Agregar usuario
             </Button>
           </div>
         </div>
@@ -370,7 +383,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
               <tbody>
                 <tr>
                   <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
+                    No hay datos
                   </td>
                 </tr>
               </tbody>
