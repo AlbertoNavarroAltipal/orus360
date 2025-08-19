@@ -15,20 +15,26 @@ import type { UsersType } from '@/types/apps/userTypes'
 const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => void; tableData?: UsersType[] }) => {
   // States
   const [role, setRole] = useState<UsersType['role']>('')
-  const [plan, setPlan] = useState<UsersType['currentPlan']>('')
+  const [emailVerified, setEmailVerified] = useState<string>('')
   const [status, setStatus] = useState<UsersType['status']>('')
 
   useEffect(() => {
     const filteredData = tableData?.filter(user => {
       if (role && user.role !== role) return false
-      if (plan && user.currentPlan !== plan) return false
-      if (status && user.status !== status) return false
+
+      if (emailVerified) {
+        const want = emailVerified === 'true'
+
+        if ((user as UsersType).emailVerified !== want) return false
+      }
+
+      if (status && (user.cognitoStatus || user.status) !== status) return false
 
       return true
     })
 
     setData(filteredData || [])
-  }, [role, plan, status, tableData, setData])
+  }, [role, emailVerified, status, tableData, setData])
 
   return (
     <CardContent>
@@ -56,21 +62,19 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
           <FormControl fullWidth>
-            <InputLabel id='plan-select'>Selecciona plan</InputLabel>
+            <InputLabel id='verified-select'>Correo verificado</InputLabel>
             <Select
               fullWidth
-              id='select-plan'
-              value={plan}
-              onChange={e => setPlan(e.target.value)}
-              label='Selecciona plan'
-              labelId='plan-select'
-              inputProps={{ placeholder: 'Selecciona plan' }}
+              id='select-verified'
+              value={emailVerified}
+              onChange={e => setEmailVerified(e.target.value)}
+              label='Correo verificado'
+              labelId='verified-select'
+              inputProps={{ placeholder: 'Correo verificado' }}
             >
-              <MenuItem value=''>Selecciona plan</MenuItem>
-              <MenuItem value='basic'>Basic</MenuItem>
-              <MenuItem value='company'>Company</MenuItem>
-              <MenuItem value='enterprise'>Enterprise</MenuItem>
-              <MenuItem value='team'>Team</MenuItem>
+              <MenuItem value=''>Todos</MenuItem>
+              <MenuItem value='true'>Sí</MenuItem>
+              <MenuItem value='false'>No</MenuItem>
             </Select>
           </FormControl>
         </Grid>
@@ -86,10 +90,15 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
               labelId='status-select'
               inputProps={{ placeholder: 'Selecciona estado' }}
             >
-              <MenuItem value=''>Selecciona estado</MenuItem>
-              <MenuItem value='pending'>Pendiente</MenuItem>
-              <MenuItem value='active'>Activo</MenuItem>
-              <MenuItem value='inactive'>Inactivo</MenuItem>
+              <MenuItem value=''>Todos</MenuItem>
+              <MenuItem value='UNCONFIRMED'>No confirmado</MenuItem>
+              <MenuItem value='CONFIRMED'>Confirmado</MenuItem>
+              <MenuItem value='ARCHIVED'>Archivado</MenuItem>
+              <MenuItem value='COMPROMISED'>Comprometido</MenuItem>
+              <MenuItem value='UNKNOWN'>Desconocido</MenuItem>
+              <MenuItem value='RESET_REQUIRED'>Reinicio requerido</MenuItem>
+              <MenuItem value='FORCE_CHANGE_PASSWORD'>Cambio de contraseña forzado</MenuItem>
+              <MenuItem value='EXTERNAL_PROVIDER'>Proveedor externo</MenuItem>
             </Select>
           </FormControl>
         </Grid>

@@ -194,6 +194,22 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         header: 'Correo',
         cell: ({ row }) => <Typography>{row.original.email}</Typography>
       }),
+      columnHelper.accessor('contact', {
+        header: 'Contacto',
+        cell: ({ row }) => <Typography>{row.original.contact || '—'}</Typography>
+      }),
+      columnHelper.accessor('emailVerified', {
+        header: 'Correo verificado',
+        cell: ({ row }) => (
+          <Chip
+            variant='tonal'
+            label={row.original.emailVerified ? 'Sí' : 'No'}
+            size='small'
+            color={row.original.emailVerified ? 'success' : 'secondary'}
+            className='capitalize'
+          />
+        )
+      }),
       columnHelper.accessor('role', {
         header: 'Rol',
         cell: ({ row }) => (
@@ -232,16 +248,53 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           <div className='flex items-center gap-3'>
             <Chip
               variant='tonal'
-              label={
-                { active: 'activo', pending: 'pendiente', inactive: 'inactivo' }[row.original.status] ||
-                row.original.status
-              }
+              label={(() => {
+                const s = (row.original.cognitoStatus as string) || row.original.status
+
+                const map: Record<string, string> = {
+                  active: 'activo',
+                  pending: 'pendiente',
+                  inactive: 'inactivo',
+                  UNCONFIRMED: 'no confirmado',
+                  CONFIRMED: 'confirmado',
+                  ARCHIVED: 'archivado',
+                  COMPROMISED: 'comprometido',
+                  UNKNOWN: 'desconocido',
+                  RESET_REQUIRED: 'reinicio requerido',
+                  FORCE_CHANGE_PASSWORD: 'cambio de contraseña forzado',
+                  EXTERNAL_PROVIDER: 'proveedor externo'
+                }
+
+                return map[s] || s
+              })()}
               size='small'
               color={userStatusObj[row.original.status] || 'secondary'}
               className='capitalize'
             />
           </div>
         )
+      }),
+      columnHelper.accessor('createdAt', {
+        header: 'Fecha de creación',
+        cell: ({ row }) => {
+          const v = row.original.createdAt
+
+          if (!v) return <Typography>—</Typography>
+
+          const d = new Date(v)
+
+          const formatted = isNaN(d.getTime())
+            ? v
+            : new Intl.DateTimeFormat(undefined, {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              }).format(d)
+
+          return <Typography>{formatted}</Typography>
+        }
       }),
       columnHelper.accessor('action', {
         header: 'Acciones',

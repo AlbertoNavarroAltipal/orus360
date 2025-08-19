@@ -91,6 +91,7 @@ export async function getCognitoUsers(): Promise<UsersType[]> {
 
     const fullName =
       attrs.name || `${attrs.given_name || ''} ${attrs.family_name || ''}`.trim() || u.Username || 'Usuario'
+
     const email = attrs.email || ''
     const picture = attrs.picture || ''
 
@@ -108,6 +109,9 @@ export async function getCognitoUsers(): Promise<UsersType[]> {
       country: attrs.zoneinfo || '',
       contact: attrs.phone_number || '',
       email,
+      emailVerified: attrs.email_verified === 'true',
+      createdAt: u.UserCreateDate ? new Date(u.UserCreateDate).toISOString() : undefined,
+      cognitoStatus: u.UserStatus,
       currentPlan,
       status,
       avatar: picture,
