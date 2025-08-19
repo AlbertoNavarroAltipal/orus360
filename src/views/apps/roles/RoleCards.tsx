@@ -70,6 +70,10 @@ const RoleCards = () => {
   return (
     <>
       <Grid container spacing={6}>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+          <OpenDialogOnElementClick element={Card} elementProps={CardProps} dialog={RoleDialog} />
+        </Grid>
+
         {cardData.map((item, index) => (
           <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={index}>
             <Card>
@@ -100,9 +104,6 @@ const RoleCards = () => {
             </Card>
           </Grid>
         ))}
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
-          <OpenDialogOnElementClick element={Card} elementProps={CardProps} dialog={RoleDialog} />
-        </Grid>
       </Grid>
     </>
   )
