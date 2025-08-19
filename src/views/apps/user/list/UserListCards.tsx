@@ -12,8 +12,10 @@ type Props = { data?: Array<{ email?: string; status?: string; cognitoStatus?: s
 const UserListCards = ({ data = [] }: Props) => {
   const total = data.length
   const activos = data.filter(u => (u.cognitoStatus || '').toUpperCase() === 'CONFIRMED').length
-  const pendientes = data.filter(u => (u.cognitoStatus || '').toUpperCase() !== 'INACTIVE').length
+  const pendientes = data.filter(u => (u.cognitoStatus || '').toUpperCase() !== 'CONFIRMED').length
   const externos = data.filter(u => (u.email || '').toLowerCase().endsWith('@altipal.com.co') === false).length
+  const verificados = data.filter(u => (u as any).emailVerified === true).length
+  const pctVerificados = total ? Math.round((verificados / total) * 100) : 0
 
   const cards: UserDataType[] = [
     {
@@ -28,9 +30,9 @@ const UserListCards = ({ data = [] }: Props) => {
     {
       title: 'Usuarios externos',
       stats: String(externos),
-      avatarIcon: 'ri-user-add-line',
+      avatarIcon: 'ri-user-shared-line',
       avatarColor: 'error',
-      trend: 'positive',
+      trend: 'neutral',
       trendNumber: '',
       subtitle: 'Dominio distinto a @altipal.com.co'
     },
@@ -40,7 +42,7 @@ const UserListCards = ({ data = [] }: Props) => {
       avatarIcon: 'ri-user-follow-line',
       avatarColor: 'success',
       trend: 'neutral',
-      trendNumber: '',
+      trendNumber: `${pctVerificados}% verificados`,
       subtitle: 'Cognito CONFIRMED'
     },
     {

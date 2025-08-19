@@ -198,6 +198,18 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
         header: 'Contacto',
         cell: ({ row }) => <Typography>{row.original.contact || '—'}</Typography>
       }),
+      columnHelper.accessor('phoneVerified', {
+        header: 'Teléfono verificado',
+        cell: ({ row }) => (
+          <Chip
+            variant='tonal'
+            label={row.original.phoneVerified ? 'Sí' : 'No'}
+            size='small'
+            color={row.original.phoneVerified ? 'success' : 'secondary'}
+            className='capitalize'
+          />
+        )
+      }),
       columnHelper.accessor('emailVerified', {
         header: 'Correo verificado',
         cell: ({ row }) => (
@@ -236,18 +248,7 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
       }),
 
       // Columna Plan removida
-      columnHelper.accessor('phoneVerified', {
-        header: 'Teléfono verificado',
-        cell: ({ row }) => (
-          <Chip
-            variant='tonal'
-            label={row.original.phoneVerified ? 'Sí' : 'No'}
-            size='small'
-            color={row.original.phoneVerified ? 'success' : 'secondary'}
-            className='capitalize'
-          />
-        )
-      }),
+
       columnHelper.accessor('status', {
         header: 'Estado',
         cell: ({ row }) => (

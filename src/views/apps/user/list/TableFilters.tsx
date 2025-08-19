@@ -17,6 +17,7 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
   const [role, setRole] = useState<UsersType['role']>('')
   const [emailVerified, setEmailVerified] = useState<string>('')
   const [status, setStatus] = useState<UsersType['status']>('')
+  const [phoneVerified, setPhoneVerified] = useState<string>('')
 
   useEffect(() => {
     const filteredData = tableData?.filter(user => {
@@ -28,18 +29,24 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
         if ((user as UsersType).emailVerified !== want) return false
       }
 
+      if (phoneVerified) {
+        const wantPhone = phoneVerified === 'true'
+
+        if ((user as UsersType).phoneVerified !== wantPhone) return false
+      }
+
       if (status && (user.cognitoStatus || user.status) !== status) return false
 
       return true
     })
 
     setData(filteredData || [])
-  }, [role, emailVerified, status, tableData, setData])
+  }, [role, emailVerified, phoneVerified, status, tableData, setData])
 
   return (
     <CardContent>
       <Grid container spacing={5}>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 3 }}>
           <FormControl fullWidth>
             <InputLabel id='role-select'>Selecciona rol</InputLabel>
             <Select
@@ -60,7 +67,7 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
             </Select>
           </FormControl>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 3 }}>
           <FormControl fullWidth>
             <InputLabel id='verified-select'>Correo verificado</InputLabel>
             <Select
@@ -78,7 +85,25 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
             </Select>
           </FormControl>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 3 }}>
+          <FormControl fullWidth>
+            <InputLabel id='phone-verified-select'>Teléfono verificado</InputLabel>
+            <Select
+              fullWidth
+              id='select-phone-verified'
+              value={phoneVerified}
+              onChange={e => setPhoneVerified(e.target.value)}
+              label='Teléfono verificado'
+              labelId='phone-verified-select'
+              inputProps={{ placeholder: 'Teléfono verificado' }}
+            >
+              <MenuItem value=''>Todos</MenuItem>
+              <MenuItem value='true'>Sí</MenuItem>
+              <MenuItem value='false'>No</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 3 }}>
           <FormControl fullWidth>
             <InputLabel id='status-select'>Selecciona estado</InputLabel>
             <Select
