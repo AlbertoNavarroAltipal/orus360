@@ -3,4 +3,5 @@ export type PermissionRowType = {
   name: string
   createdDate: string
   assignedTo: string | string[]
+  core?: boolean
 }
