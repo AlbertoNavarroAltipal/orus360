@@ -12,7 +12,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <UserListCards />
+        <UserListCards data={userData} />
       </Grid>
       <Grid size={{ xs: 12 }}>
         <UserListTable tableData={userData} />

@@ -14,6 +14,7 @@ export type UsersType = {
   country?: string
   contact?: string
   emailVerified?: boolean
+  phoneVerified?: boolean
   createdAt?: string
   fullName: string
   username: string

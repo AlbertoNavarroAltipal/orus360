@@ -234,12 +234,18 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </div>
         )
       }),
-      columnHelper.accessor('currentPlan', {
-        header: 'Plan',
+
+      // Columna Plan removida
+      columnHelper.accessor('phoneVerified', {
+        header: 'Teléfono verificado',
         cell: ({ row }) => (
-          <Typography className='capitalize' color='text.primary'>
-            {row.original.currentPlan}
-          </Typography>
+          <Chip
+            variant='tonal'
+            label={row.original.phoneVerified ? 'Sí' : 'No'}
+            size='small'
+            color={row.original.phoneVerified ? 'success' : 'secondary'}
+            className='capitalize'
+          />
         )
       }),
       columnHelper.accessor('status', {
@@ -281,7 +287,8 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
 
           if (!v) return <Typography>—</Typography>
 
-          const d = new Date(v)
+          // v es un timestamp en string del SSR; parsearlo a número garantiza consistencia
+          const d = new Date(Number(v))
 
           const formatted = isNaN(d.getTime())
             ? v
@@ -290,7 +297,8 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
                 month: '2-digit',
                 day: '2-digit',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                hour12: false
               }).format(d)
 
           return <Typography>{formatted}</Typography>

@@ -7,50 +7,56 @@ import type { UserDataType } from '@components/card-statistics/HorizontalWithSub
 // Component Imports
 import HorizontalWithSubtitle from '@components/card-statistics/HorizontalWithSubtitle'
 
-// Vars
-const data: UserDataType[] = [
-  {
-    title: 'Sesiones',
-    stats: '21,459',
-    avatarIcon: 'ri-group-line',
-    avatarColor: 'primary',
-    trend: 'positive',
-    trendNumber: '29%',
-    subtitle: 'Usuarios totales'
-  },
-  {
-    title: 'Usuarios de pago',
-    stats: '4,567',
-    avatarIcon: 'ri-user-add-line',
-    avatarColor: 'error',
-    trend: 'positive',
-    trendNumber: '18%',
-    subtitle: 'Analítica de la semana pasada'
-  },
-  {
-    title: 'Usuarios activos',
-    stats: '19,860',
-    avatarIcon: 'ri-user-follow-line',
-    avatarColor: 'success',
-    trend: 'negative',
-    trendNumber: '14%',
-    subtitle: 'Analítica de la semana pasada'
-  },
-  {
-    title: 'Usuarios pendientes',
-    stats: '237',
-    avatarIcon: 'ri-user-search-line',
-    avatarColor: 'warning',
-    trend: 'positive',
-    trendNumber: '42%',
-    subtitle: 'Analítica de la semana pasada'
-  }
-]
+type Props = { data?: Array<{ email?: string; status?: string; cognitoStatus?: string }> }
 
-const UserListCards = () => {
+const UserListCards = ({ data = [] }: Props) => {
+  const total = data.length
+  const activos = data.filter(u => (u.cognitoStatus || '').toUpperCase() === 'CONFIRMED').length
+  const pendientes = data.filter(u => (u.cognitoStatus || '').toUpperCase() !== 'INACTIVE').length
+  const externos = data.filter(u => (u.email || '').toLowerCase().endsWith('@altipal.com.co') === false).length
+
+  const cards: UserDataType[] = [
+    {
+      title: 'Sesiones',
+      stats: String(total),
+      avatarIcon: 'ri-group-line',
+      avatarColor: 'primary',
+      trend: 'positive',
+      trendNumber: '',
+      subtitle: 'Usuarios totales'
+    },
+    {
+      title: 'Usuarios externos',
+      stats: String(externos),
+      avatarIcon: 'ri-user-add-line',
+      avatarColor: 'error',
+      trend: 'positive',
+      trendNumber: '',
+      subtitle: 'Dominio distinto a @altipal.com.co'
+    },
+    {
+      title: 'Usuarios activos',
+      stats: String(activos),
+      avatarIcon: 'ri-user-follow-line',
+      avatarColor: 'success',
+      trend: 'neutral',
+      trendNumber: '',
+      subtitle: 'Cognito CONFIRMED'
+    },
+    {
+      title: 'Usuarios pendientes',
+      stats: String(pendientes),
+      avatarIcon: 'ri-user-search-line',
+      avatarColor: 'warning',
+      trend: 'neutral',
+      trendNumber: '',
+      subtitle: 'No inactivos'
+    }
+  ]
+
   return (
     <Grid container spacing={6}>
-      {data.map((item, i) => (
+      {cards.map((item, i) => (
         <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
           <HorizontalWithSubtitle {...item} />
         </Grid>

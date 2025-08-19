@@ -110,7 +110,10 @@ export async function getCognitoUsers(): Promise<UsersType[]> {
       contact: attrs.phone_number || '',
       email,
       emailVerified: attrs.email_verified === 'true',
-      createdAt: u.UserCreateDate ? new Date(u.UserCreateDate).toISOString() : undefined,
+      phoneVerified: attrs.phone_number_verified === 'true',
+
+      // Guardar timestamp numérico para evitar formatos distintos SSR/CSR
+      createdAt: u.UserCreateDate ? String(new Date(u.UserCreateDate).getTime()) : undefined,
       cognitoStatus: u.UserStatus,
       currentPlan,
       status,
