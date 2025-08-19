@@ -16,16 +16,19 @@ const UserListCards = ({ data = [] }: Props) => {
   const externos = data.filter(u => (u.email || '').toLowerCase().endsWith('@altipal.com.co') === false).length
   const verificados = data.filter(u => (u as any).emailVerified === true).length
   const pctVerificados = total ? Math.round((verificados / total) * 100) : 0
+  const pctExternos = total ? Math.round((externos / total) * 100) : 0
+  const pctActivos = total ? Math.round((activos / total) * 100) : 0
+  const pctPendientes = total ? Math.round((pendientes / total) * 100) : 0
 
   const cards: UserDataType[] = [
     {
-      title: 'Sesiones',
+      title: 'Usuarios',
       stats: String(total),
       avatarIcon: 'ri-group-line',
       avatarColor: 'primary',
       trend: 'positive',
       trendNumber: '',
-      subtitle: 'Usuarios totales'
+      subtitle: 'La cantidad total de usuarios internos y externos'
     },
     {
       title: 'Usuarios externos',
@@ -33,7 +36,7 @@ const UserListCards = ({ data = [] }: Props) => {
       avatarIcon: 'ri-user-shared-line',
       avatarColor: 'error',
       trend: 'neutral',
-      trendNumber: '',
+      trendNumber: `${pctExternos}% del total`,
       subtitle: 'Dominio distinto a @altipal.com.co'
     },
     {
@@ -42,8 +45,8 @@ const UserListCards = ({ data = [] }: Props) => {
       avatarIcon: 'ri-user-follow-line',
       avatarColor: 'success',
       trend: 'neutral',
-      trendNumber: `${pctVerificados}% verificados`,
-      subtitle: 'Cognito CONFIRMED'
+      trendNumber: `${pctActivos}% del total · ${pctVerificados}% `,
+      subtitle: `Todos los usuarios activos y que están verificados`
     },
     {
       title: 'Usuarios pendientes',
@@ -51,8 +54,8 @@ const UserListCards = ({ data = [] }: Props) => {
       avatarIcon: 'ri-user-search-line',
       avatarColor: 'warning',
       trend: 'neutral',
-      trendNumber: '',
-      subtitle: 'No inactivos'
+      trendNumber: `${pctPendientes}% del total`,
+      subtitle: 'Todo usuario que el estado sea diferente a verificado'
     }
   ]
 
