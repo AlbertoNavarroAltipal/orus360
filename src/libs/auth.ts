@@ -2,7 +2,6 @@ import { createHmac } from 'crypto'
 
 import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import CognitoProvider from 'next-auth/providers/cognito'
 import GoogleProvider from 'next-auth/providers/google'
 import {
   CognitoIdentityProviderClient,
@@ -267,56 +266,11 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string
-    }),
+    })
 
-    // Cognito OIDC Hosted UI provider
-    CognitoProvider(
-      (() => {
-        const region = process.env.AWS_REGION || process.env.NEXT_PUBLIC_AWS_REGION
-        const clientId = (process.env.COGNITO_CLIENT_ID ||
-          process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID) as string
+    // (Hosted UI Google removed per request to avoid redirects)
 
-        const clientSecret = process.env.COGNITO_CLIENT_SECRET
-        let issuer = process.env.COGNITO_ISSUER as string | undefined
-
-        // Fallback to amplify_outputs.json if needed
-        if (!issuer || !region || !clientId) {
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const fallback = require('../../amplify_outputs.json')
-            const fbRegion = region || fallback?.auth?.aws_region
-            const poolId = fallback?.auth?.user_pool_id
-
-            if (!issuer && fbRegion && poolId) {
-              issuer = `https://cognito-idp.${fbRegion}.amazonaws.com/${poolId}`
-            }
-          } catch {
-            // ignore
-          }
-        }
-
-        const hasSecret = !!clientSecret
-
-        // Build provider options conditionally
-        const base: any = {
-          clientId,
-          issuer,
-          authorization: { params: { scope: 'openid email profile', lang: 'es' } },
-          checks: ['pkce', 'state']
-        }
-
-        if (hasSecret) {
-          base.clientSecret = clientSecret
-
-          // Default token auth method applies (client_secret_basic)
-        } else {
-          // Public client, no secret
-          base.client = { token_endpoint_auth_method: 'none' }
-        }
-
-        return base
-      })()
-    )
+    // (Generic Hosted UI removed to keep auth in-app with Credentials + Google direct)
   ],
 
   session: {

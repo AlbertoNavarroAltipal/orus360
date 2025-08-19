@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 
 import Link from 'next/link'
 
-import { signIn } from 'next-auth/react'
+// import { signIn } from 'next-auth/react'
 
 // MUI Imports
 import AppBar from '@mui/material/AppBar'
@@ -46,7 +46,8 @@ export default function SuperAppLanding() {
   const theme = useTheme()
   const isSmDown = useMediaQuery(theme.breakpoints.down('sm'))
   const { settings } = useSettings()
-  const handleCognitoLogin = () => signIn('cognito', { callbackUrl: '/' })
+
+  /* Removed Hosted UI Cognito login to keep auth in-app */
 
   const logoSrc = useImageVariant(
     (settings.mode as any) ?? 'system',
@@ -128,7 +129,7 @@ export default function SuperAppLanding() {
             >
               Crear cuenta
             </Button>
-            <Button variant='contained' color='primary' onClick={handleCognitoLogin} startIcon={<LoginIcon />}>
+            <Button variant='contained' color='primary' component={Link} href='/login' startIcon={<LoginIcon />}>
               Iniciar sesión en ORUS
             </Button>
           </Stack>
@@ -179,7 +180,8 @@ export default function SuperAppLanding() {
               variant='contained'
               size='large'
               color='primary'
-              onClick={handleCognitoLogin}
+              component={Link}
+              href='/login'
               startIcon={<LoginIcon />}
             >
               Iniciar sesión en ORUS
@@ -538,7 +540,7 @@ export default function SuperAppLanding() {
               Crea tu cuenta o inicia sesión y descubre cómo ORUS 360 puede centralizar tus operaciones.
             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent='center' sx={{ mt: 3 }}>
-              <Button variant='contained' color='primary' onClick={handleCognitoLogin} startIcon={<LoginIcon />}>
+              <Button variant='contained' color='primary' component={Link} href='/login' startIcon={<LoginIcon />}>
                 Iniciar sesión en ORUS
               </Button>
               <Button

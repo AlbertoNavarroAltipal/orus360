@@ -317,9 +317,6 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
             </div>
             <Divider className='gap-3'>o</Divider>
             <div className='flex justify-center items-center gap-2'>
-              <Button variant='outlined' onClick={() => signIn('cognito')}>
-                Continuar con Cognito
-              </Button>
               <IconButton size='small' onClick={() => signIn('google')}>
                 <i className='ri-google-fill text-googlePlus' />
               </IconButton>

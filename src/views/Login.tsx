@@ -422,11 +422,10 @@ const Login = ({ mode }: { mode: Mode }) => {
             className='self-center text-textPrimary'
             startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
             sx={{ '& .MuiButton-startIcon': { marginInlineEnd: 3 } }}
-            onClick={() => signIn('cognito-google', { callbackUrl: '/' })}
+            onClick={() => signIn('google', { callbackUrl: getLocalizedUrl('/', locale as Locale) })}
           >
-            Sign in with Google (Cognito)
+            Sign in with Google
           </Button>
-          {!isMfaStep && <Button onClick={() => signIn('cognito', { callbackUrl: '/' })}>Sign in with Cognito</Button>}
         </div>
       </div>
     </div>
