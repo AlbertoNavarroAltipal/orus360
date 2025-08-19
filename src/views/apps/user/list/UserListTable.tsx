@@ -15,29 +15,15 @@ import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
-import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
 import { styled } from '@mui/material/styles'
-import TablePagination from '@mui/material/TablePagination'
 import type { TextFieldProps } from '@mui/material/TextField'
 
+// MUI X Data Grid
+import { DataGridPremium, type GridColDef, type GridFilterModel } from '@mui/x-data-grid-premium'
+
 // Third-party Imports
-import classnames from 'classnames'
-import { rankItem } from '@tanstack/match-sorter-utils'
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  getFilteredRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFacetedMinMaxValues,
-  getPaginationRowModel,
-  getSortedRowModel
-} from '@tanstack/react-table'
-import type { ColumnDef, FilterFn } from '@tanstack/react-table'
-import type { RankingInfo } from '@tanstack/match-sorter-utils'
+// classnames no longer used
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -55,20 +41,9 @@ import { getInitials } from '@/utils/getInitials'
 import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
-import tableStyles from '@core/styles/table.module.css'
+// import tableStyles from '@core/styles/table.module.css'
 
-declare module '@tanstack/table-core' {
-  interface FilterFns {
-    fuzzy: FilterFn<unknown>
-  }
-  interface FilterMeta {
-    itemRank: RankingInfo
-  }
-}
-
-type UsersTypeWithAction = UsersType & {
-  action?: string
-}
+// UsersTypeWithAction ya no es necesario con DataGrid
 
 type UserRoleType = {
   [key: string]: { icon: string; color: string }
@@ -81,18 +56,7 @@ type UserStatusType = {
 // Styled Components
 const Icon = styled('i')({})
 
-const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
-  // Rank the item
-  const itemRank = rankItem(row.getValue(columnId), value)
-
-  // Store the itemRank info
-  addMeta({
-    itemRank
-  })
-
-  // Return if the item should be filtered in/out
-  return itemRank.passed
-}
+// Eliminado: filtros fuzzy de TanStack; usaremos quickFilter de DataGrid
 
 const DebouncedInput = ({
   value: initialValue,
@@ -138,99 +102,97 @@ const userStatusObj: UserStatusType = {
   inactive: 'secondary'
 }
 
-// Column Definitions
-const columnHelper = createColumnHelper<UsersTypeWithAction>()
+// Column Definitions handled via GridColDef en DataGrid
 
 const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
   // States
   const [addUserOpen, setAddUserOpen] = useState(false)
-  const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState(...[tableData])
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [], quickFilterValues: [] })
 
   // Hooks
   const { lang: locale } = useParams()
 
-  const columns = useMemo<ColumnDef<UsersTypeWithAction, any>[]>(
+  const columns = useMemo<GridColDef[]>(
     () => [
       {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        )
-      },
-      columnHelper.accessor('fullName', {
-        header: 'Usuario',
-        cell: ({ row }) => (
+        field: 'fullName',
+        headerName: 'Usuario',
+        flex: 1.3,
+        minWidth: 220,
+        sortable: true,
+        renderCell: params => (
           <div className='flex items-center gap-4'>
-            {getAvatar({ avatar: row.original.avatar, fullName: row.original.fullName })}
+            {getAvatar({ avatar: (params.row as UsersType).avatar, fullName: params.value })}
             <div className='flex flex-col'>
               <Typography className='font-medium' color='text.primary'>
-                {row.original.fullName}
+                {params.value}
               </Typography>
-              <Typography variant='body2'>{row.original.username}</Typography>
+              <Typography variant='body2'>{(params.row as UsersType).username}</Typography>
             </div>
           </div>
         )
-      }),
-      columnHelper.accessor('email', {
-        header: 'Correo',
-        cell: ({ row }) => <Typography>{row.original.email}</Typography>
-      }),
-      columnHelper.accessor('contact', {
-        header: 'Contacto',
-        cell: ({ row }) => <Typography>{row.original.contact || '—'}</Typography>
-      }),
-      columnHelper.accessor('phoneVerified', {
-        header: 'Teléfono verificado',
-        cell: ({ row }) => (
+      },
+      {
+        field: 'email',
+        headerName: 'Correo',
+        flex: 1,
+        minWidth: 200,
+        renderCell: params => <Typography>{params.value || '—'}</Typography>
+      },
+      {
+        field: 'contact',
+        headerName: 'Contacto',
+        flex: 0.8,
+        minWidth: 140,
+        renderCell: params => <Typography>{params.value || '—'}</Typography>
+      },
+      {
+        field: 'phoneVerified',
+        headerName: 'Teléfono verificado',
+        flex: 0.8,
+        minWidth: 180,
+        sortable: false,
+        renderCell: params => (
           <Chip
             variant='tonal'
-            label={row.original.phoneVerified ? 'Sí' : 'No'}
+            label={params.value ? 'Sí' : 'No'}
             size='small'
-            color={row.original.phoneVerified ? 'success' : 'secondary'}
+            color={params.value ? 'success' : 'secondary'}
             className='capitalize'
           />
         )
-      }),
-      columnHelper.accessor('emailVerified', {
-        header: 'Correo verificado',
-        cell: ({ row }) => (
+      },
+      {
+        field: 'emailVerified',
+        headerName: 'Correo verificado',
+        flex: 0.8,
+        minWidth: 160,
+        sortable: false,
+        renderCell: params => (
           <Chip
             variant='tonal'
-            label={row.original.emailVerified ? 'Sí' : 'No'}
+            label={params.value ? 'Sí' : 'No'}
             size='small'
-            color={row.original.emailVerified ? 'success' : 'secondary'}
+            color={params.value ? 'success' : 'secondary'}
             className='capitalize'
           />
         )
-      }),
-      columnHelper.accessor('role', {
-        header: 'Rol',
-        cell: ({ row }) => (
+      },
+      {
+        field: 'role',
+        headerName: 'Rol',
+        flex: 0.8,
+        minWidth: 160,
+        renderCell: params => (
           <div className='flex items-center gap-2'>
-            {row.original.role && userRoleObj[row.original.role] ? (
+            {params.value && userRoleObj[params.value as string] ? (
               <Icon
-                className={userRoleObj[row.original.role].icon}
+                className={userRoleObj[params.value as string].icon}
                 sx={{
-                  color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`,
+                  color: `var(--mui-palette-${userRoleObj[params.value as string].color}-main)`,
                   fontSize: '1.375rem'
                 }}
               />
@@ -241,58 +203,58 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
               />
             )}
             <Typography className='capitalize' color='text.primary'>
-              {row.original.role || '—'}
+              {params.value || '—'}
             </Typography>
           </div>
         )
-      }),
+      },
+      {
+        field: 'status',
+        headerName: 'Estado',
+        flex: 0.8,
+        minWidth: 160,
+        renderCell: params => {
+          const s = ((params.row as any).cognitoStatus as string) || (params.value as string)
 
-      // Columna Plan removida
+          const map: Record<string, string> = {
+            active: 'activo',
+            pending: 'pendiente',
+            inactive: 'inactivo',
+            UNCONFIRMED: 'no confirmado',
+            CONFIRMED: 'confirmado',
+            ARCHIVED: 'archivado',
+            COMPROMISED: 'comprometido',
+            UNKNOWN: 'desconocido',
+            RESET_REQUIRED: 'reinicio requerido',
+            FORCE_CHANGE_PASSWORD: 'cambio de contraseña forzado',
+            EXTERNAL_PROVIDER: 'proveedor externo'
+          }
 
-      columnHelper.accessor('status', {
-        header: 'Estado',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
+          return (
             <Chip
               variant='tonal'
-              label={(() => {
-                const s = (row.original.cognitoStatus as string) || row.original.status
-
-                const map: Record<string, string> = {
-                  active: 'activo',
-                  pending: 'pendiente',
-                  inactive: 'inactivo',
-                  UNCONFIRMED: 'no confirmado',
-                  CONFIRMED: 'confirmado',
-                  ARCHIVED: 'archivado',
-                  COMPROMISED: 'comprometido',
-                  UNKNOWN: 'desconocido',
-                  RESET_REQUIRED: 'reinicio requerido',
-                  FORCE_CHANGE_PASSWORD: 'cambio de contraseña forzado',
-                  EXTERNAL_PROVIDER: 'proveedor externo'
-                }
-
-                return map[s] || s
-              })()}
+              label={map[s] || s || '—'}
               size='small'
-              color={userStatusObj[row.original.status] || 'secondary'}
+              color={userStatusObj[(params.row as any).status] || 'secondary'}
               className='capitalize'
             />
-          </div>
-        )
-      }),
-      columnHelper.accessor('createdAt', {
-        header: 'Fecha de creación',
-        cell: ({ row }) => {
-          const v = row.original.createdAt
+          )
+        }
+      },
+      {
+        field: 'createdAt',
+        headerName: 'Fecha de creación',
+        flex: 1,
+        minWidth: 200,
+        renderCell: params => {
+          const v = params.value as string | number | undefined
 
           if (!v) return <Typography>—</Typography>
 
-          // v es un timestamp en string del SSR; parsearlo a número garantiza consistencia
           const d = new Date(Number(v))
 
           const formatted = isNaN(d.getTime())
-            ? v
+            ? String(v)
             : new Intl.DateTimeFormat(undefined, {
                 year: 'numeric',
                 month: '2-digit',
@@ -304,12 +266,18 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
 
           return <Typography>{formatted}</Typography>
         }
-      }),
-      columnHelper.accessor('action', {
-        header: 'Acciones',
-        cell: ({ row }) => (
+      },
+      {
+        field: 'actions',
+        headerName: 'Acciones',
+        sortable: false,
+        filterable: false,
+        align: 'left',
+        headerAlign: 'left',
+        minWidth: 160,
+        renderCell: params => (
           <div className='flex items-center'>
-            <IconButton onClick={() => setData(data?.filter(product => product.id !== row.original.id))}>
+            <IconButton onClick={() => setData(prev => prev?.filter(u => u.id !== (params.row as UsersType).id))}>
               <i className='ri-delete-bin-7-line text-textSecondary' />
             </IconButton>
             <IconButton>
@@ -334,42 +302,14 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
               ]}
             />
           </div>
-        ),
-        enableSorting: false
-      })
+        )
+      }
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, filteredData]
   )
 
-  const table = useReactTable({
-    data: filteredData as UsersType[],
-    columns,
-    filterFns: {
-      fuzzy: fuzzyFilter
-    },
-    state: {
-      rowSelection,
-      globalFilter
-    },
-    initialState: {
-      pagination: {
-        pageSize: 10
-      }
-    },
-    enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
-    globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues()
-  })
+  // Sin TanStack: DataGrid maneja sorting, filtering y pagination internamente
 
   const getAvatar = (params: Pick<UsersType, 'avatar' | 'fullName'>) => {
     const { avatar, fullName } = params
@@ -403,7 +343,12 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           <div className='flex items-center gap-x-4 gap-4 flex-col max-sm:is-full sm:flex-row'>
             <DebouncedInput
               value={globalFilter ?? ''}
-              onChange={value => setGlobalFilter(String(value))}
+              onChange={value => {
+                const v = String(value)
+
+                setGlobalFilter(v)
+                setFilterModel(prev => ({ ...prev, quickFilterValues: v ? [v] : [] }))
+              }}
               placeholder='Buscar usuario'
               className='max-sm:is-full'
             />
@@ -413,72 +358,31 @@ const UserListTable = ({ tableData }: { tableData?: UsersType[] }) => {
           </div>
         </div>
         <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
-            <thead>
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <>
-                          <div
-                            className={classnames({
-                              'flex items-center': header.column.getIsSorted(),
-                              'cursor-pointer select-none': header.column.getCanSort()
-                            })}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <i className='ri-arrow-up-s-line text-xl' />,
-                              desc: <i className='ri-arrow-down-s-line text-xl' />
-                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                          </div>
-                        </>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tbody>
-                <tr>
-                  <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No hay datos
-                  </td>
-                </tr>
-              </tbody>
-            ) : (
-              <tbody>
-                {table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            )}
-          </table>
+          <div style={{ width: '100%' }}>
+            <DataGridPremium
+              autoHeight
+              rows={filteredData || []}
+              columns={columns}
+              checkboxSelection
+              disableRowSelectionOnClick
+              pagination
+              pageSizeOptions={[10, 25, 50]}
+              initialState={{
+                pagination: { paginationModel: { page: 0, pageSize: 10 } }
+              }}
+              filterModel={filterModel}
+              onFilterModelChange={setFilterModel}
+              getRowId={row => (row as UsersType).id}
+              slots={{
+                noRowsOverlay: () => (
+                  <div className='py-6 text-center'>
+                    <Typography>No hay datos</Typography>
+                  </div>
+                )
+              }}
+            />
+          </div>
         </div>
-        <TablePagination
-          rowsPerPageOptions={[10, 25, 50]}
-          component='div'
-          className='border-bs'
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
-          onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-        />
       </Card>
       <AddUserDrawer
         open={addUserOpen}
