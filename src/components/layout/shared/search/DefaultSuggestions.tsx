@@ -22,103 +22,40 @@ type DefaultSuggestionsType = {
 
 const defaultSuggestions: DefaultSuggestionsType[] = [
   {
-    sectionLabel: 'Popular Searches',
+    sectionLabel: 'Búsquedas populares',
     items: [
-      {
-        label: 'Analytics',
-        href: '/dashboards/analytics',
-        icon: 'ri-bar-chart-line'
-      },
-      {
-        label: 'CRM',
-        href: '/dashboards/crm',
-        icon: 'ri-pie-chart-2-line'
-      },
-      {
-        label: 'eCommerce',
-        href: '/dashboards/ecommerce',
-        icon: 'ri-shopping-bag-3-line'
-      },
-      {
-        label: 'User List',
-        href: '/apps/user/list',
-        icon: 'ri-file-user-line'
-      }
+      { label: 'Inicio', href: '/inicio', icon: 'ri-home-smile-line' },
+      { label: 'Personas', href: '/iam/personas', icon: 'ri-user-3-line' },
+      { label: 'Roles', href: '/iam/roles', icon: 'ri-shield-user-line' },
+      { label: 'Permisos', href: '/iam/permisos', icon: 'ri-key-2-line' }
     ]
   },
   {
-    sectionLabel: 'Apps',
+    sectionLabel: 'IAM',
+    items: [{ label: 'Cargos', href: '/iam/cargos', icon: 'ri-briefcase-3-line' }]
+  },
+  {
+    sectionLabel: 'Legalización - Administración',
     items: [
-      {
-        label: 'Calendar',
-        href: '/apps/calendar',
-        icon: 'ri-calendar-line'
-      },
-      {
-        label: 'Invoice List',
-        href: '/apps/invoice/list',
-        icon: 'ri-file-list-3-line'
-      },
-      {
-        label: 'User List',
-        href: '/apps/user/list',
-        icon: 'ri-file-user-line'
-      },
-      {
-        label: 'Roles & Permissions',
-        href: '/apps/roles',
-        icon: 'ri-lock-unlock-line'
-      }
+      { label: 'Conceptos', href: '/legalizacion-gastos-y-anticipos/administracion/conceptos' },
+      { label: 'Cierre contable', href: '/legalizacion-gastos-y-anticipos/administracion/cierre-contable' },
+      { label: 'Roles del usuario', href: '/legalizacion-gastos-y-anticipos/administracion/roles-del-usuario' }
     ]
   },
   {
-    sectionLabel: 'Pages',
+    sectionLabel: 'Legalización - Solicitudes',
     items: [
-      {
-        label: 'User Profile',
-        href: '/pages/user-profile',
-        icon: 'ri-user-3-line'
-      },
-      {
-        label: 'Account Settings',
-        href: '/pages/account-settings',
-        icon: 'ri-settings-4-line'
-      },
-      {
-        label: 'Pricing',
-        href: '/pages/pricing',
-        icon: 'ri-money-dollar-circle-line'
-      },
-      {
-        label: 'FAQ',
-        href: '/pages/faq',
-        icon: 'ri-question-line'
-      }
+      { label: 'Anticipos', href: '/legalizacion-gastos-y-anticipos/solicitudes/anticipos' },
+      { label: 'Reembolsos', href: '/legalizacion-gastos-y-anticipos/solicitudes/reembolsos' }
     ]
   },
   {
-    sectionLabel: 'Forms & Charts',
+    sectionLabel: 'Legalización - Consultas',
     items: [
-      {
-        label: 'Form Layouts',
-        href: '/forms/form-layouts',
-        icon: 'ri-file-text-line'
-      },
-      {
-        label: 'Form Validation',
-        href: '/forms/form-validation',
-        icon: 'ri-checkbox-multiple-line'
-      },
-      {
-        label: 'Form Wizard',
-        href: '/forms/form-wizard',
-        icon: 'ri-equalizer-line'
-      },
-      {
-        label: 'Apex Charts',
-        href: '/charts/apex-charts',
-        icon: 'ri-line-chart-line'
-      }
+      { label: 'Proveedores', href: '/legalizacion-gastos-y-anticipos/consultas/proveedores' },
+      { label: 'Presupuestos', href: '/legalizacion-gastos-y-anticipos/consultas/presupuestos' },
+      { label: 'Anticipos', href: '/legalizacion-gastos-y-anticipos/consultas/anticipos' },
+      { label: 'Reembolsos', href: '/legalizacion-gastos-y-anticipos/consultas/reembolsos' }
     ]
   }
 ]
