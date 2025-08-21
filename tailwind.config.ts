@@ -1,18 +1,12 @@
-import tailwindcssLogical from 'tailwindcss-logical'
-import type { Config } from 'tailwindcss'
-
-import tailwindPlugin from './src/@core/tailwind/plugin'
-
-const config: Config = {
+/** @type {import('tailwindcss').Config} */
+module.exports = {
   content: ['./src/**/*.{js,ts,jsx,tsx,css}'],
   corePlugins: {
     preflight: false
   },
   important: '#__next',
-  plugins: [tailwindcssLogical, tailwindPlugin],
+  plugins: [require('tailwindcss-logical'), require('./src/@core/tailwind/plugin')],
   theme: {
     extend: {}
   }
 }
-
-export default config

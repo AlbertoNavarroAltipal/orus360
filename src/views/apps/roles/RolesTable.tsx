@@ -195,19 +195,27 @@ const RolesTable = ({ tableData }: { tableData?: UsersType[] }) => {
         header: 'Email',
         cell: ({ row }) => <Typography>{row.original.email}</Typography>
       }),
+
       columnHelper.accessor('role', {
         header: 'Role',
-        cell: ({ row }) => (
-          <div className='flex items-center gap-2'>
-            <Icon
-              className={userRoleObj[row.original.role].icon}
-              sx={{ color: `var(--mui-palette-${userRoleObj[row.original.role].color}-main)`, fontSize: '1.375rem' }}
-            />
-            <Typography className='capitalize' color='text.primary'>
-              {row.original.role}
-            </Typography>
-          </div>
-        )
+        cell: ({ row }) => {
+          const meta = userRoleObj[row.original.role as keyof typeof userRoleObj] ?? {
+            icon: '',
+            color: 'primary' as ThemeColor
+          }
+
+          return (
+            <div className='flex items-center gap-2'>
+              <Icon
+                className={meta.icon}
+                sx={{ color: `var(--mui-palette-${meta.color}-main)`, fontSize: '1.375rem' }}
+              />
+              <Typography className='capitalize' color='text.primary'>
+                {row.original.role ?? 'unknown'}
+              </Typography>
+            </div>
+          )
+        }
       }),
       columnHelper.accessor('currentPlan', {
         header: 'Plan',
