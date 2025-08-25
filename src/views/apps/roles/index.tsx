@@ -2,23 +2,20 @@
 import Grid from '@mui/material/Grid2'
 import Typography from '@mui/material/Typography'
 
-// Type Imports
-import type { UsersType } from '@/types/apps/userTypes'
-
 // Component Imports
 import RoleCards from './RoleCards'
 import RolesTable from './RolesTable'
 
-const Roles = ({ userData }: { userData?: UsersType[] }) => {
+const Roles = () => {
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
         <Typography variant='h4' className='mbe-1'>
-          Roles List
+          Lista de Roles
         </Typography>
         <Typography>
-          A role provided access to predefined menus and features so that depending on assigned role an administrator
-          can have access to what he need
+          Un rol proporciona acceso a menús y funcionalidades predefinidas, permitiendo que según el rol asignado, un
+          administrador tenga acceso a lo que necesita.
         </Typography>
       </Grid>
       <Grid size={{ xs: 12 }}>
@@ -26,12 +23,12 @@ const Roles = ({ userData }: { userData?: UsersType[] }) => {
       </Grid>
       <Grid size={{ xs: 12 }} className='!pbs-12'>
         <Typography variant='h4' className='mbe-1'>
-          Total users with their roles
+          Total de usuarios con sus roles
         </Typography>
-        <Typography>Find all of your company&#39;s administrator accounts and their associate roles.</Typography>
+        <Typography>Encuentra todas las cuentas administrativas de tu empresa y sus roles asociados.</Typography>
       </Grid>
       <Grid size={{ xs: 12 }}>
-        <RolesTable tableData={userData} />
+        <RolesTable />
       </Grid>
     </Grid>
   )
