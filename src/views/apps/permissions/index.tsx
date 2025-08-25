@@ -67,6 +67,14 @@ interface Permission {
   created_by: string
 }
 
+interface PermissionDetail extends Permission {
+  usedByUsers: string[]
+  usedByRoles: Array<{
+    code: string
+    description: string
+  }>
+}
+
 interface PermissionResponse {
   statusCode: number
   message: string
@@ -163,12 +171,47 @@ const Permissions = () => {
   const [deleteConfirmCode, setDeleteConfirmCode] = useState('')
   const [deleteErrors, setDeleteErrors] = useState<string[]>([])
 
+  // Detail dialog states
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [permissionDetail, setPermissionDetail] = useState<PermissionDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   // API response states
   const [totalRows, setTotalRows] = useState(0)
 
   const { data: session } = useSession()
 
-  // API Functions
+  const fetchPermissionDetail = async (code: string) => {
+    try {
+      setDetailLoading(true)
+      const token = (session as any)?.user?.masterToken
+
+      if (!token) {
+        toast.error('No se encontró token de autenticación')
+        return
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL_ORUS_API}/api/permisos/${code}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setPermissionDetail(result.data)
+        setDetailDialogOpen(true)
+      } else {
+        const errorResult = result as ErrorResponse
+        toast.error(errorResult.message?.join(', ') || 'Error al cargar detalle del permiso')
+      }
+    } catch (error) {
+      toast.error('Error al conectar con el servidor')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
   const getAuthHeaders = () => {
     const token = (session as any)?.user?.masterToken
     return {
@@ -358,6 +401,11 @@ const Permissions = () => {
     setAnchorEl(null)
   }
 
+  const handleDetailClick = (permission: Permission) => {
+    fetchPermissionDetail(permission.code)
+    setAnchorEl(null)
+  }
+
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, permission: Permission) => {
     setAnchorEl(event.currentTarget)
     setSelectedPermission(permission)
@@ -391,10 +439,13 @@ const Permissions = () => {
         header: 'Código',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
-            <Typography color='text.primary' className='font-medium'>
+            <Typography
+              color='primary'
+              className='font-medium cursor-pointer hover:underline'
+              onClick={() => fetchPermissionDetail(row.original.code)}
+            >
               {row.original.code}
             </Typography>
-            {row.original.root && <Chip label='Root' color='error' size='small' />}
           </div>
         )
       }),
@@ -405,6 +456,15 @@ const Permissions = () => {
             {row.original.description}
           </Typography>
         )
+      }),
+      columnHelper.accessor('root', {
+        header: 'Root',
+        cell: ({ row }) =>
+          row.original.root ? (
+            <Chip label='Sí' color='error' size='small' />
+          ) : (
+            <Chip label='No' color='default' size='small' />
+          )
       }),
       columnHelper.accessor('created_at_co', {
         header: 'Fecha de creación',
@@ -623,6 +683,10 @@ const Permissions = () => {
 
       {/* Actions Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        <MenuItem onClick={() => selectedPermission && handleDetailClick(selectedPermission)}>
+          <i className='ri-eye-line mr-2' />
+          Ver detalle
+        </MenuItem>
         <MenuItem onClick={() => selectedPermission && handleEditPermission(selectedPermission)}>
           <i className='ri-edit-line mr-2' />
           Editar
@@ -678,6 +742,162 @@ const Permissions = () => {
             {dialogLoading && <CircularProgress size={16} className='mr-2' />}
             Eliminar
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Permission Detail Dialog */}
+      <Dialog open={detailDialogOpen} onClose={() => setDetailDialogOpen(false)} maxWidth='md' fullWidth>
+        <DialogTitle className='flex items-center gap-2'>
+          <i className='ri-information-line' />
+          Detalle del Permiso
+        </DialogTitle>
+
+        <DialogContent>
+          {detailLoading ? (
+            <div className='flex justify-center py-8'>
+              <CircularProgress />
+            </div>
+          ) : permissionDetail ? (
+            <div className='space-y-6'>
+              {/* Basic Info */}
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div>
+                  <Typography variant='subtitle2' color='text.secondary' className='mb-1'>
+                    Código
+                  </Typography>
+                  <Typography variant='body1' className='font-medium'>
+                    {permissionDetail.code}
+                  </Typography>
+                </div>
+
+                <div>
+                  <Typography variant='subtitle2' color='text.secondary' className='mb-1'>
+                    Tipo
+                  </Typography>
+                  <div>
+                    {permissionDetail.root ? (
+                      <Chip label='Root' color='error' size='small' />
+                    ) : (
+                      <Chip label='Normal' color='default' size='small' />
+                    )}
+                  </div>
+                </div>
+
+                <div className='md:col-span-2'>
+                  <Typography variant='subtitle2' color='text.secondary' className='mb-1'>
+                    Descripción
+                  </Typography>
+                  <Typography variant='body1'>{permissionDetail.description}</Typography>
+                </div>
+
+                <div>
+                  <Typography variant='subtitle2' color='text.secondary' className='mb-1'>
+                    Fecha de creación
+                  </Typography>
+                  <Typography variant='body1'>{permissionDetail.created_at_co}</Typography>
+                </div>
+
+                <div>
+                  <Typography variant='subtitle2' color='text.secondary' className='mb-1'>
+                    Creado por
+                  </Typography>
+                  <Typography variant='body1' className='capitalize'>
+                    {permissionDetail.created_by}
+                  </Typography>
+                </div>
+              </div>
+
+              {/* Used by Users */}
+              <div>
+                <Typography variant='subtitle1' className='mb-3 font-medium flex items-center gap-2'>
+                  <i className='ri-user-line' />
+                  Usuarios que lo usan ({permissionDetail.usedByUsers.length})
+                </Typography>
+                {permissionDetail.usedByUsers.length > 0 ? (
+                  <div className='flex flex-wrap gap-2'>
+                    {permissionDetail.usedByUsers.map((email, index) => (
+                      <Chip
+                        key={index}
+                        label={email}
+                        variant='outlined'
+                        color='primary'
+                        size='small'
+                        icon={<i className='ri-mail-line text-sm' />}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <Typography color='text.secondary' className='italic'>
+                    No hay usuarios usando este permiso directamente
+                  </Typography>
+                )}
+              </div>
+
+              {/* Used by Roles */}
+              <div>
+                <Typography variant='subtitle1' className='mb-3 font-medium flex items-center gap-2'>
+                  <i className='ri-shield-user-line' />
+                  Roles que lo incluyen ({permissionDetail.usedByRoles.length})
+                </Typography>
+                {permissionDetail.usedByRoles.length > 0 ? (
+                  <div className='flex flex-wrap gap-2'>
+                    {permissionDetail.usedByRoles.map((role, index) => (
+                      <Chip
+                        key={index}
+                        label={`${role.description} (${role.code})`}
+                        variant='outlined'
+                        color='secondary'
+                        size='small'
+                        icon={<i className='ri-shield-line text-sm' />}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <Typography color='text.secondary' className='italic'>
+                    No hay roles que incluyan este permiso
+                  </Typography>
+                )}
+              </div>
+
+              {/* Usage Summary */}
+              <div className='bg-gray-50 p-4 rounded-lg'>
+                <Typography variant='subtitle2' className='mb-2 font-medium flex items-center gap-2'>
+                  <i className='ri-bar-chart-line' />
+                  Resumen de uso
+                </Typography>
+                <div className='grid grid-cols-2 gap-4 text-sm'>
+                  <div>
+                    <Typography color='text.secondary'>Total usuarios:</Typography>
+                    <Typography className='font-medium'>{permissionDetail.usedByUsers.length}</Typography>
+                  </div>
+                  <div>
+                    <Typography color='text.secondary'>Total roles:</Typography>
+                    <Typography className='font-medium'>{permissionDetail.usedByRoles.length}</Typography>
+                  </div>
+                </div>
+                {(permissionDetail.usedByUsers.length > 0 || permissionDetail.usedByRoles.length > 0) && (
+                  <Alert severity='warning' className='mt-3'>
+                    Este permiso está siendo utilizado. Ten cuidado al modificarlo o eliminarlo.
+                  </Alert>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setDetailDialogOpen(false)}>Cerrar</Button>
+          {permissionDetail && (
+            <Button
+              variant='outlined'
+              onClick={() => {
+                setDetailDialogOpen(false)
+                handleEditPermission(permissionDetail)
+              }}
+            >
+              Editar
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </>
