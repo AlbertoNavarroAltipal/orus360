@@ -31,6 +31,7 @@ export const horizontalMenuData = (dictionary: Awaited<ReturnType<typeof getDict
           label: 'Administración',
           icon: 'ri-settings-3-line',
           children: [
+            { label: 'Categorias', href: '/legalizacion-gastos-y-anticipos/administracion/categorias' },
             { label: 'Conceptos', href: '/legalizacion-gastos-y-anticipos/administracion/conceptos' },
             { label: 'Cierre contable', href: '/legalizacion-gastos-y-anticipos/administracion/cierre-contable' },
             { label: 'Roles del usuario', href: '/legalizacion-gastos-y-anticipos/administracion/roles-del-usuario' }
@@ -87,6 +88,7 @@ export const verticalMenuData = (dictionary: Awaited<ReturnType<typeof getDictio
           label: 'Administración',
           icon: 'ri-settings-3-line',
           children: [
+            { label: 'Categorias', href: '/legalizacion-gastos-y-anticipos/administracion/categorias' },
             { label: 'Conceptos', href: '/legalizacion-gastos-y-anticipos/administracion/conceptos' },
             { label: 'Cierre contable', href: '/legalizacion-gastos-y-anticipos/administracion/cierre-contable' },
             { label: 'Roles del usuario', href: '/legalizacion-gastos-y-anticipos/administracion/roles-del-usuario' }
