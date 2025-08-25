@@ -26,7 +26,6 @@ import { object, minLength, string, email, pipe, nonEmpty } from 'valibot'
 import classnames from 'classnames'
 import type { SubmitHandler } from 'react-hook-form'
 import type { InferInput } from 'valibot'
-import { OTPInput } from 'input-otp'
 
 // Type Imports
 import type { Mode } from '@core/types'
@@ -45,34 +44,24 @@ import { useSettings } from '@core/hooks/useSettings'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
-import styles from '@/libs/styles/inputOtp.module.css'
 
 type ErrorType = {
   message: string[]
+  statusCode?: number
 }
 
 type FormData = InferInput<typeof schema>
 
 const schema = object({
-  email: pipe(string(), minLength(1, 'This field is required'), email('Please enter a valid email address')),
-  password: pipe(
-    string(),
-    nonEmpty('This field is required'),
-    minLength(5, 'Password must be at least 5 characters long')
-  )
+  email: pipe(string(), minLength(1, 'Este campo es requerido'), email('Por favor ingresa un email válido')),
+  password: pipe(string(), nonEmpty('Este campo es requerido'), minLength(1, 'La contraseña es requerida'))
 })
 
 const Login = ({ mode }: { mode: Mode }) => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false)
   const [errorState, setErrorState] = useState<ErrorType | null>(null)
-  const [isMfaStep, setIsMfaStep] = useState(false)
-  const [mfaSession, setMfaSession] = useState<string | null>(null)
-  const [mfaType, setMfaType] = useState<'SMS_MFA' | 'SOFTWARE_TOKEN_MFA'>('SMS_MFA')
-  const [mfaDestination, setMfaDestination] = useState<string | null>(null)
-  const [mfaCode, setMfaCode] = useState('')
-
-  // TOTP setup se maneja en la página dedicada de Two Step
+  const [isLoading, setIsLoading] = useState(false)
 
   // Vars
   const darkImg = '/images/pages/auth-v2-mask-dark.png'
@@ -91,13 +80,12 @@ const Login = ({ mode }: { mode: Mode }) => {
   const {
     control,
     handleSubmit,
-    formState: { errors },
-    watch
+    formState: { errors }
   } = useForm<FormData>({
     resolver: valibotResolver(schema),
     defaultValues: {
-      email: 'admin@materio.com',
-      password: 'admin'
+      email: '',
+      password: ''
     }
   })
 
@@ -114,151 +102,79 @@ const Login = ({ mode }: { mode: Mode }) => {
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
   const onSubmit: SubmitHandler<FormData> = async data => {
-    // Step 2: MFA
-    if (isMfaStep) {
-      if (!mfaSession || !mfaCode || mfaCode.length < 6) {
-        setErrorState({ message: ['Ingresa el código MFA de 6 dígitos.'] })
+    setIsLoading(true)
+    setErrorState(null)
 
-        return
-      }
-
-      const res = await signIn('credentials', {
-        email: data.email,
-        password: data.password,
-        mfaCode,
-        mfaType,
-        session: mfaSession,
-        redirect: false
-      })
-
-      if (res?.ok && !res.error) {
-        const redirectURL = searchParams.get('redirectTo') ?? '/'
-
-        router.replace(getLocalizedUrl(redirectURL, locale as Locale))
-
-        return
-      }
-
-      let message = 'Código inválido o expirado'
-
-      if (res?.error) {
-        try {
-          const parsed = JSON.parse(res.error)
-
-          message = Array.isArray(parsed?.message) ? parsed.message[0] : (parsed?.message ?? message)
-        } catch {
-          message = res.error
-        }
-      }
-
-      setErrorState({ message: [message] })
-
-      return
-    }
-
-    // Step 1: email + password (preflight to detect MFA_REQUIRED/MFA_SETUP)
-    const res = await fetch('/api/cognito/initiate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: data.email, password: data.password })
-    })
-
-    if (res.ok) {
-      // No MFA required (según preflight), intentamos finalizar con NextAuth credentials
-      const signInRes = await signIn('credentials', {
+    try {
+      const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
         redirect: false
       })
 
-      if (signInRes?.ok && !signInRes.error) {
+      if (result?.ok && !result.error) {
+        // Login exitoso
         const redirectURL = searchParams.get('redirectTo') ?? '/'
-
         router.replace(getLocalizedUrl(redirectURL, locale as Locale))
-
         return
       }
 
-      // Si NextAuth devolvió un reto igualmente, manejarlo aquí
-      if (signInRes?.error) {
+      // Manejar errores
+      if (result?.error) {
         try {
-          const parsed = JSON.parse(signInRes.error)
+          const parsedError = JSON.parse(result.error)
+          const statusCode = parsedError.statusCode || 401
+          const messages = Array.isArray(parsedError.message)
+            ? parsedError.message
+            : [parsedError.message || 'Error de autenticación']
 
-          if (parsed?.code === 'MFA_REQUIRED') {
-            setIsMfaStep(true)
-            setMfaSession(parsed.session)
-            setMfaType(parsed.challenge === 'SOFTWARE_TOKEN_MFA' ? 'SOFTWARE_TOKEN_MFA' : 'SMS_MFA')
-            setMfaDestination(parsed.destination || null)
-            setErrorState({ message: ['Ingresa el código MFA enviado.'] })
-
-            return
-          }
-
-          if (parsed?.code === 'MFA_SETUP_REQUIRED') {
-            // Guardar credenciales mínimas para Two Step y redirigir
-            if (typeof window !== 'undefined') {
-              try {
-                sessionStorage.setItem('enroll:email', watch('email'))
-                sessionStorage.setItem('enroll:password', watch('password'))
-              } catch {}
-            }
-
-            router.replace(getLocalizedUrl('/pages/auth/two-step', locale as Locale))
-
-            return
-          }
-
-          const message = Array.isArray(parsed?.message) ? parsed.message[0] : parsed?.message
-
-          if (message) setErrorState({ message: [message] })
+          setErrorState({
+            message: messages,
+            statusCode
+          })
         } catch {
-          setErrorState({ message: [signInRes.error] })
+          // Si no se puede parsear el error, usar el error directo
+          setErrorState({
+            message: [result.error || 'Error de autenticación'],
+            statusCode: 401
+          })
         }
+      } else {
+        setErrorState({
+          message: ['Error de autenticación. Por favor intenta nuevamente.'],
+          statusCode: 500
+        })
       }
-    } else {
-      const dataJson = await res.json().catch(() => null)
-
-      if (dataJson?.code === 'MFA_REQUIRED') {
-        setIsMfaStep(true)
-        setMfaSession(dataJson.session)
-        setMfaType(dataJson.challenge === 'SOFTWARE_TOKEN_MFA' ? 'SOFTWARE_TOKEN_MFA' : 'SMS_MFA')
-        setMfaDestination(dataJson.destination || null)
-        setErrorState({ message: ['Ingresa el código MFA enviado.'] })
-
-        return
-      }
-
-      if (dataJson?.code === 'MFA_SETUP_REQUIRED') {
-        // Redirigir a Two Step y no manejar enrolamiento en esta pantalla
-        if (typeof window !== 'undefined') {
-          try {
-            sessionStorage.setItem('enroll:email', data.email)
-            sessionStorage.setItem('enroll:password', data.password)
-          } catch {}
-        }
-
-        router.replace(getLocalizedUrl('/pages/auth/two-step', locale as Locale))
-
-        return
-      }
-
-      // Usuario no confirmado
-      if (dataJson?.code === 'UserNotConfirmedException') {
-        setErrorState({ message: [dataJson?.message || 'Usuario no confirmado. Revisa tu correo.'] })
-
-        return
-      }
-
-      // Usuario o contraseña incorrectos
-      if (dataJson?.code === 'NotAuthorizedException') {
-        setErrorState({ message: [dataJson?.message || 'Usuario o contraseña incorrectos.'] })
-
-        return
-      }
+    } catch (error: any) {
+      console.error('Login error:', error)
+      setErrorState({
+        message: ['Error de conexión. Por favor intenta nuevamente.'],
+        statusCode: 500
+      })
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    // Si nada de lo anterior funcionó, muestra error genérico
-    setErrorState({ message: ['Invalid credentials'] })
+  const handleGoogleSignIn = async () => {
+    try {
+      await signIn('google', {
+        callbackUrl: getLocalizedUrl(searchParams.get('redirectTo') || '/', locale as Locale)
+      })
+    } catch (error) {
+      console.error('Google sign in error:', error)
+      setErrorState({
+        message: ['Error al iniciar sesión con Google. Por favor intenta nuevamente.'],
+        statusCode: 500
+      })
+    }
+  }
+
+  // Función para obtener el tipo de alerta basado en el código de estado
+  const getAlertSeverity = (statusCode?: number) => {
+    if (!statusCode) return 'error'
+    if (statusCode >= 400 && statusCode < 500) return 'warning'
+    return 'error'
   }
 
   return (
@@ -290,19 +206,43 @@ const Login = ({ mode }: { mode: Mode }) => {
         </div>
         <div className='flex flex-col gap-5 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset]'>
           <div>
-            <Typography variant='h4'>{`Welcome to ${themeConfig.templateName}!👋🏻`}</Typography>
-            <Typography>Please sign-in to your account and start the adventure</Typography>
+            <Typography variant='h4'>{`¡Bienvenido a ${themeConfig.templateName}! 👋🏻`}</Typography>
+            <Typography>Por favor inicia sesión en tu cuenta y comienza la aventura</Typography>
           </div>
-          <Alert icon={false} className='bg-primaryLight'>
-            <Typography variant='body2' color='primary.main'>
-              Email: <span className='font-medium'>admin@materio.com</span> / Pass:{' '}
-              <span className='font-medium'>admin</span>
-            </Typography>
-          </Alert>
+
+          <Button
+            fullWidth
+            color='secondary'
+            variant='outlined'
+            size='large'
+            disabled={isLoading}
+            startIcon={<img src='/images/logos/google.png' alt='Google' width={20} height={20} />}
+            onClick={handleGoogleSignIn}
+            sx={{
+              '& .MuiButton-startIcon': { marginInlineEnd: 2 },
+              borderColor: '#dadce0',
+              color: '#3c4043',
+              textTransform: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              '&:hover': {
+                backgroundColor: '#f8f9fa',
+                borderColor: '#dadce0'
+              }
+            }}
+          >
+            {isLoading ? 'Conectando...' : 'Iniciar sesión con Google'}
+          </Button>
+
+          <Divider className='gap-3'>o</Divider>
 
           {errorState && (
-            <Alert severity='error' onClose={() => setErrorState(null)}>
-              {errorState.message[0]}
+            <Alert severity={getAlertSeverity(errorState.statusCode)} onClose={() => setErrorState(null)}>
+              <div>
+                {errorState.message.map((msg, index) => (
+                  <div key={index}>{msg}</div>
+                ))}
+              </div>
             </Alert>
           )}
 
@@ -324,14 +264,13 @@ const Login = ({ mode }: { mode: Mode }) => {
                   autoFocus
                   type='email'
                   label='Email'
+                  disabled={isLoading}
                   onChange={e => {
                     field.onChange(e.target.value)
-                    errorState !== null && setErrorState(null)
+                    if (errorState !== null) setErrorState(null)
                   }}
-                  {...((errors.email || errorState !== null) && {
-                    error: true,
-                    helperText: errors?.email?.message || errorState?.message[0]
-                  })}
+                  error={!!errors.email}
+                  helperText={errors?.email?.message}
                 />
               )}
             />
@@ -343,13 +282,13 @@ const Login = ({ mode }: { mode: Mode }) => {
                 <TextField
                   {...field}
                   fullWidth
-                  label='Password'
+                  label='Contraseña'
                   id='login-password'
                   type={isPasswordShown ? 'text' : 'password'}
-                  disabled={isMfaStep}
+                  disabled={isLoading}
                   onChange={e => {
                     field.onChange(e.target.value)
-                    errorState !== null && setErrorState(null)
+                    if (errorState !== null) setErrorState(null)
                   }}
                   slotProps={{
                     input: {
@@ -358,6 +297,7 @@ const Login = ({ mode }: { mode: Mode }) => {
                           <IconButton
                             size='small'
                             edge='end'
+                            disabled={isLoading}
                             onClick={handleClickShowPassword}
                             onMouseDown={e => e.preventDefault()}
                             aria-label='toggle password visibility'
@@ -368,64 +308,30 @@ const Login = ({ mode }: { mode: Mode }) => {
                       )
                     }
                   }}
-                  {...(errors.password && { error: true, helperText: errors.password.message })}
+                  error={!!errors.password}
+                  helperText={errors.password?.message}
                 />
               )}
             />
-            {isMfaStep && (
-              <div className='flex flex-col gap-3'>
-                <Typography>{`Código MFA${mfaDestination ? ` (${mfaDestination})` : ''}`}</Typography>
-                <OTPInput
-                  onChange={code => {
-                    setMfaCode(code)
-                    if (errorState) setErrorState(null)
-                  }}
-                  value={mfaCode}
-                  maxLength={6}
-                  containerClassName='flex items-center'
-                  render={({ slots }) => (
-                    <div className='flex items-center justify-between w-full gap-4'>
-                      {slots.slice(0, 6).map((slot, idx) => (
-                        <div key={idx} className={classnames(styles.slot, { [styles.slotActive]: slot.isActive })}>
-                          {slot.char !== null && <div>{slot.char}</div>}
-                          {slot.hasFakeCaret && (
-                            <div className={styles.fakeCaret}>
-                              <div className='w-px h-5 bg-textPrimary' />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                />
-              </div>
-            )}
+
             <div className='flex justify-between items-center flex-wrap gap-x-3 gap-y-1'>
-              <FormControlLabel control={<Checkbox defaultChecked />} label='Remember me' />
+              <FormControlLabel control={<Checkbox defaultChecked />} label='Recordarme' disabled={isLoading} />
               <Typography className='text-end' color='primary.main' component={Link} href='/forgot-password'>
-                Forgot password?
+                ¿Olvidaste tu contraseña?
               </Typography>
             </div>
-            <Button fullWidth variant='contained' type='submit'>
-              {isMfaStep ? 'Confirmar MFA' : 'Log In'}
+
+            <Button fullWidth variant='contained' type='submit' disabled={isLoading}>
+              {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
+
             <div className='flex justify-center items-center flex-wrap gap-2'>
-              <Typography>New on our platform?</Typography>
+              <Typography>¿Nuevo en nuestra plataforma?</Typography>
               <Typography component={Link} href='/register' color='primary.main'>
-                Create an account
+                Crear una cuenta
               </Typography>
             </div>
           </form>
-          <Divider className='gap-3'>or</Divider>
-          <Button
-            color='secondary'
-            className='self-center text-textPrimary'
-            startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
-            sx={{ '& .MuiButton-startIcon': { marginInlineEnd: 3 } }}
-            onClick={() => signIn('google', { callbackUrl: getLocalizedUrl('/', locale as Locale) })}
-          >
-            Sign in with Google
-          </Button>
         </div>
       </div>
     </div>
