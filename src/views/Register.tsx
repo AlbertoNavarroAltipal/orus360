@@ -6,11 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 // Next Imports
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-
 import { signIn } from 'next-auth/react'
-
-// AWS Amplify Auth (modular v6)
-import { signUp as cognitoSignUp, confirmSignUp, resendSignUpCode } from 'aws-amplify/auth'
 
 // MUI Imports
 import Typography from '@mui/material/Typography'
@@ -41,7 +37,62 @@ import { useSettings } from '@core/hooks/useSettings'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
-import { configureAmplify } from '@/libs/amplify/config'
+
+// =============================
+// CONFIG
+// =============================
+// Para exponer en el cliente, usa NEXT_PUBLIC_URL_ORUS_API en .env
+// Ejemplo: NEXT_PUBLIC_URL_ORUS_API=http://localhost:3001
+const API_BASE = process.env.NEXT_PUBLIC_URL_ORUS_API || ''
+
+// Helper para componer mensajes de error de la API NestJS
+function extractErrorMessage(err: unknown): string {
+  try {
+    if (typeof err === 'string') return err
+
+    // Si viene de fetch response.json()
+    if (err && typeof err === 'object') {
+      const anyErr = err as any
+      const msg = anyErr?.message
+
+      if (Array.isArray(msg)) return msg.join(' \n')
+      if (typeof msg === 'string' && msg.trim()) return msg
+
+      if (anyErr?.statusCode) {
+        return `Error ${anyErr.statusCode}.` + (anyErr?.path ? ` (${anyErr.path})` : '')
+      }
+    }
+  } catch (_) {}
+  return 'Ocurrió un error inesperado.'
+}
+
+async function registerUser(payload: { full_name?: string; email: string; password: string }) {
+  const res = await fetch(`${API_BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+
+  const data = await res.json().catch(() => ({}))
+
+  if (!res.ok) {
+    throw data || { statusCode: res.status, message: 'Registro falló' }
+  }
+
+  return data as {
+    statusCode: number
+    message: string
+    data: {
+      id: string
+      full_name: string
+      email: string
+      master_token: string
+      created_at: string
+      updated_at: string
+      message?: string
+    }
+  }
+}
 
 const RegisterV2 = ({ mode }: { mode: Mode }) => {
   // States
@@ -50,8 +101,6 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [acceptTerms, setAcceptTerms] = useState(false)
-  const [code, setCode] = useState('')
-  const [stage, setStage] = useState<'form' | 'confirm' | 'done'>('form')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
@@ -80,17 +129,14 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
-  // Configure Amplify once on mount
+  // Eliminado: Amplify/Cognito
   useEffect(() => {
-    configureAmplify()
+    // No-op: dejamos aquí por si en el futuro se requiere inicialización
   }, [])
 
   const canSubmit = useMemo(() => {
-    if (stage === 'form') return !!email && !!password && acceptTerms
-    if (stage === 'confirm') return !!email && !!code
-
-    return false
-  }, [stage, email, password, code, acceptTerms])
+    return !!email && !!password && acceptTerms
+  }, [email, password, acceptTerms])
 
   const handleSignUp = async () => {
     if (loading) return
@@ -99,84 +145,28 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
     setLoading(true)
 
     try {
-      // In this user pool, email is the username
-      await cognitoSignUp({
-        username: email,
-        password,
-        options: {
-          userAttributes: {
-            email,
-            name: username || undefined
-          },
-          autoSignIn: false
-        }
-      })
-      setStage('confirm')
-      setInfo('Te enviamos un código a tu correo para confirmar tu cuenta.')
-    } catch (e: any) {
-      const msg = e?.message || ''
-      const name = e?.name || ''
-
-      if (name === 'NotAuthorizedException' || msg.includes('SignUp is not permitted')) {
-        setError(
-          'El registro de usuarios está deshabilitado en este User Pool. Pide al administrador que habilite el self sign-up o usa el botón "Continuar con Cognito" si tu Hosted UI lo permite.'
-        )
-      } else if (name === 'UsernameExistsException') {
-        // El usuario ya existe (puede estar sin confirmar). Ofrecer pasar a confirmación y reenvío de código.
-        setStage('confirm')
-        setInfo(
-          'El usuario ya existe. Si no confirmaste, ingresa el código que recibiste o solicita reenviar el código.'
-        )
-      } else if (name === 'LimitExceededException' || /Attempt limit exceeded/i.test(msg)) {
-        setError('Demasiados intentos. Intenta de nuevo en unos minutos.')
-      } else {
-        setError(msg || 'Error al registrar. Intenta de nuevo.')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleConfirm = async () => {
-    if (loading) return
-    setError(null)
-    setInfo(null)
-    setLoading(true)
-
-    try {
-      await confirmSignUp({ username: email, confirmationCode: code })
-      setStage('done')
-      setInfo('Cuenta confirmada. Redirigiendo a verificación en 2 pasos...')
-
-      // Guardar temporalmente para el enrolamiento TOTP en Two Step
-      if (typeof window !== 'undefined') {
-        try {
-          sessionStorage.setItem('enroll:email', email)
-          sessionStorage.setItem('enroll:password', password)
-        } catch {
-          // ignore
-        }
+      const payload = {
+        full_name: username?.trim() || undefined,
+        email: email.trim(),
+        password
       }
 
-      // Redirigir a la nueva página de Two Step para completar MFA (TOTP) dentro de la app
-      router.replace(getLocalizedUrl('/pages/auth/two-step', locale as any))
-    } catch (e: any) {
-      setError(e?.message || 'Error al confirmar el código.')
-    } finally {
-      setLoading(false)
-    }
-  }
+      const res = await registerUser(payload)
 
-  const handleResend = async () => {
-    setError(null)
-    setInfo(null)
-    setLoading(true)
+      // Guarda el master_token temporalmente si necesitas onboarding inmediato
+      try {
+        sessionStorage.setItem('orus:master_token', res.data.master_token)
+        sessionStorage.setItem('orus:email', res.data.email)
+      } catch {}
 
-    try {
-      await resendSignUpCode({ username: email })
-      setInfo('Código reenviado. Revisa tu correo.')
-    } catch (e: any) {
-      setError(e?.message || 'No se pudo reenviar el código.')
+      setInfo(res?.data?.message || 'Usuario registrado exitosamente.')
+
+      // Redirige a login (o a onboarding si ya existe)
+      setTimeout(() => {
+        router.replace(getLocalizedUrl('/login', (locale as Locale) || 'es'))
+      }, 1200)
+    } catch (e) {
+      setError(extractErrorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -207,7 +197,7 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
       </div>
       <div className='flex justify-center items-center bs-full bg-backgroundPaper !min-is-full p-6 md:!min-is-[unset] md:p-12 md:is-[480px]'>
         <Link
-          href={getLocalizedUrl('/', locale as Locale)}
+          href={getLocalizedUrl('/', (locale as Locale) || 'es')}
           className='absolute block-start-5 sm:block-start-[38px] inline-start-6 sm:inline-start-[38px]'
         >
           <Logo />
@@ -223,90 +213,70 @@ const RegisterV2 = ({ mode }: { mode: Mode }) => {
             autoComplete='off'
             onSubmit={e => {
               e.preventDefault()
-              if (stage === 'form') handleSignUp()
-              else if (stage === 'confirm') handleConfirm()
+              handleSignUp()
             }}
             className='flex flex-col gap-5'
           >
             {error ? <Alert severity='error'>{error}</Alert> : null}
             {info ? <Alert severity='info'>{info}</Alert> : null}
 
-            {stage === 'form' && (
-              <>
-                <TextField
-                  autoFocus
-                  fullWidth
-                  label='Nombre (opcional)'
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
+            <>
+              <TextField
+                autoFocus
+                fullWidth
+                label='Nombre (opcional)'
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+              />
+              <TextField
+                fullWidth
+                type='email'
+                label='Email'
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+              <TextField
+                fullWidth
+                label='Password'
+                type={isPasswordShown ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position='end'>
+                        <IconButton
+                          size='small'
+                          edge='end'
+                          onClick={handleClickShowPassword}
+                          onMouseDown={e => e.preventDefault()}
+                        >
+                          <i className={isPasswordShown ? 'ri-eye-off-line' : 'ri-eye-line'} />
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }
+                }}
+              />
+              <div className='flex justify-between items-center gap-3'>
+                <FormControlLabel
+                  control={<Checkbox checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)} />}
+                  label={
+                    <>
+                      <span>Acepto </span>
+                      <Link className='text-primary' href='/' onClick={e => e.preventDefault()}>
+                        la política de privacidad y términos
+                      </Link>
+                    </>
+                  }
                 />
-                <TextField
-                  fullWidth
-                  type='email'
-                  label='Email'
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                />
-                <TextField
-                  fullWidth
-                  label='Password'
-                  type={isPasswordShown ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position='end'>
-                          <IconButton
-                            size='small'
-                            edge='end'
-                            onClick={handleClickShowPassword}
-                            onMouseDown={e => e.preventDefault()}
-                          >
-                            <i className={isPasswordShown ? 'ri-eye-off-line' : 'ri-eye-line'} />
-                          </IconButton>
-                        </InputAdornment>
-                      )
-                    }
-                  }}
-                />
-                <div className='flex justify-between items-center gap-3'>
-                  <FormControlLabel
-                    control={<Checkbox checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)} />}
-                    label={
-                      <>
-                        <span>Acepto </span>
-                        <Link className='text-primary' href='/' onClick={e => e.preventDefault()}>
-                          la política de privacidad y términos
-                        </Link>
-                      </>
-                    }
-                  />
-                </div>
-              </>
-            )}
-
-            {stage === 'confirm' && (
-              <>
-                <TextField
-                  fullWidth
-                  label='Código de verificación'
-                  value={code}
-                  onChange={e => setCode(e.target.value)}
-                  inputMode='numeric'
-                />
-                <div className='flex justify-between'>
-                  <Button variant='text' onClick={handleResend} disabled={loading}>
-                    Reenviar código
-                  </Button>
-                </div>
-              </>
-            )}
+              </div>
+            </>
 
             <Button fullWidth variant='contained' type='submit' disabled={!canSubmit || loading}>
-              {loading ? <CircularProgress size={18} /> : stage === 'form' ? 'Crear cuenta' : 'Confirmar'}
+              {loading ? <CircularProgress size={18} /> : 'Crear cuenta'}
             </Button>
 
             <div className='flex justify-center items-center flex-wrap gap-2'>
