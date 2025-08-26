@@ -1,11 +1,13 @@
 'use client'
 
 import * as React from 'react'
+
 import { DataGridPremium, GridColDef, GridRenderCellParams, GridToolbar } from '@mui/x-data-grid-premium'
+
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
-import Tooltip from '@mui/material/Tooltip'
+
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
@@ -29,16 +31,16 @@ type Props = {
   onRequestDeleteRow?: (row: Concept) => void
 }
 
-/** Formato dd/mm/aaaa (Colombia) */
 /** dd/mm/aaaa (Colombia) */
-const formatDateCO = (input: unknown) => {
-  if (input === null || input === undefined) return ''
-  const t = typeof input === 'number' ? input : Date.parse(String(input))
+const renderDateCO = (v: unknown) => {
+  const t = typeof v === 'number' ? v : v instanceof Date ? v.getTime() : v ? Date.parse(String(v)) : NaN
+
   if (isNaN(t)) return ''
   const d = new Date(t)
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const yyyy = d.getFullYear()
+
   return `${dd}/${mm}/${yyyy}`
 }
 
@@ -116,11 +118,11 @@ const Datagrid: React.FC<Props> = ({
 }) => {
   const columns = React.useMemo<GridColDef<Concept>[]>(
     () => [
+      // ✅ “Código” visual: proviene de rows[i].codigoVisual (id padded)
       {
-        field: 'id',
-        headerName: 'ID',
-        width: 90,
-        sortable: false
+        field: 'codigoVisual',
+        headerName: 'Código',
+        width: 110
       },
       {
         field: 'concepto',
@@ -128,10 +130,9 @@ const Datagrid: React.FC<Props> = ({
         flex: 1.4,
         minWidth: 200
       },
-      // Código: existe pero oculto en initialState
       {
         field: 'codigo',
-        headerName: 'Código',
+        headerName: 'Código (API)',
         width: 120
       },
       {
@@ -145,9 +146,11 @@ const Datagrid: React.FC<Props> = ({
         flex: 1,
         minWidth: 160,
         valueGetter: params => params?.row?.categoriaProyectoDesc ?? params?.row?.categoriaProyecto ?? '',
+
         renderCell: (params: GridRenderCellParams<string>) => {
           const nombre = params?.row?.categoriaProyectoDesc
           const idCat = params?.row?.categoriaProyecto
+
           return <span title={idCat ? `ID: ${idCat}` : ''}>{nombre || idCat || ''}</span>
         }
       },
@@ -167,19 +170,7 @@ const Datagrid: React.FC<Props> = ({
         field: 'createdAt',
         headerName: 'Fecha de creación',
         width: 160,
-        sortable: true, // sigues usando ordenamiento server-side arriba
-        renderCell: params => {
-          const v = params?.row?.createdAt
-          // acepta number (ms), ISO string o Date:
-          const t = typeof v === 'number' ? v : v instanceof Date ? v.getTime() : v ? Date.parse(String(v)) : NaN
-          if (isNaN(t)) return ''
-
-          const d = new Date(t)
-          const dd = String(d.getDate()).padStart(2, '0')
-          const mm = String(d.getMonth() + 1).padStart(2, '0')
-          const yyyy = d.getFullYear()
-          return `${dd}/${mm}/${yyyy}`
-        }
+        renderCell: params => renderDateCO(params?.row?.createdAt)
       },
       {
         field: 'actions',
@@ -229,13 +220,11 @@ const Datagrid: React.FC<Props> = ({
             quickFilterProps: { debounceMs: 300 }
           }
         }}
-        // Ocultar "código"
         initialState={{
           columns: {
             columnVisibilityModel: { codigo: false }
           }
         }}
-        // Server-side pagination
         paginationMode='server'
         rowCount={rowCount ?? 0}
         pageSizeOptions={[5, 10, 20, 50]}
@@ -244,11 +233,9 @@ const Datagrid: React.FC<Props> = ({
           if (m.pageSize !== pageSize) onPageSizeChange(m.pageSize)
           if (m.page !== page - 1) onPageChange(m.page + 1)
         }}
-        // Server-side sorting
         sortingMode='server'
         sortModel={sortModel ?? []}
         onSortModelChange={onSortModelChange}
-        // UX
         onRowDoubleClick={params => params?.row && onRowDoubleClick?.(params.row)}
       />
     </Box>

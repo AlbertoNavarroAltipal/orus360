@@ -1,7 +1,7 @@
-// src/views/legalizacion-gastos-y-anticipos/administracion/conceptos/index.tsx
 'use client'
 
 import * as React from 'react'
+
 import { useSession } from 'next-auth/react'
 
 import Box from '@mui/material/Box'
@@ -21,11 +21,20 @@ import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
+import CircularProgress from '@mui/material/CircularProgress'
 import { type GridSortModel } from '@mui/x-data-grid-premium'
 
 import Datagrid from './Datagrid'
 import FormDrawer from './FormDrawer'
-import { listConcepts, createConcept, updateConcept, deleteConcept, type OrusError } from '@/libs/orus/conceptos'
+import {
+  listConcepts,
+  createConcept,
+  updateConcept,
+  deleteConcept,
+  getConcept,
+  listActiveCategories,
+  type OrusError
+} from '@/libs/orus/conceptos'
 
 export type Concept = {
   id: number | string
@@ -36,12 +45,27 @@ export type Concept = {
   codigo: string
   estado: boolean
   createdAt: number | string | Date
+  codigoVisual: string
 }
 
 type Props = { initialRows?: Concept[] }
 
+/** Detecta “código visual”: 003, 12, 0007, etc. */
+const isVisualCode = (s: string) => /^\s*0*\d+\s*$/.test(s)
+
+/** Convierte “003” -> “3” */
+const visualToId = (s: string) => String(parseInt(s, 10))
+
+/** Genera “003” a partir de un id numérico o devuelve el id si no es numérico */
+const makeCodigoVisual = (id: string | number) => {
+  const s = String(id)
+
+  return /^\d+$/.test(s) ? s.padStart(3, '0') : s
+}
+
 const ConceptosView = ({ initialRows = [] }: Props) => {
   const { data: session } = useSession()
+
   const token =
     (session as any)?.masterToken || (session as any)?.user?.masterToken || process.env.NEXT_PUBLIC_MASTER_TOKEN || ''
 
@@ -59,41 +83,126 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
   const [sortModel, setSortModel] = React.useState<GridSortModel>([{ field: 'concepto', sort: 'asc' }])
   const orderBy = sortModel[0]?.field === 'createdAt' ? 'created_at' : 'concepto'
   const order = sortModel[0]?.sort ?? 'asc'
-  const [estado] = React.useState<'' | boolean>('') // Si luego deseas filtro por estado, agrega UI
+  const [estado] = React.useState<'' | boolean>('')
+
+  // Filtro de Categoría de proyecto
   const [categoriaProyecto, setCategoriaProyecto] = React.useState<string | number | ''>('')
+  const [cats, setCats] = React.useState<Array<{ id: string; descripcion: string }>>([])
+  const [loadingCats, setLoadingCats] = React.useState(false)
 
   const [loading, setLoading] = React.useState(false)
   const [deleteTarget, setDeleteTarget] = React.useState<Concept | null>(null)
 
-  // util: normalizar errores del backend a string[]
+  // 🛡️ Guard contra respuestas obsoletas
+  const reqSeq = React.useRef(0)
+
+  // normalizar errores backend -> string[]
   const normalizeBackendErrors = (err: any): string[] => {
     const d: OrusError | any = err?.detail ?? err
     const msgs: string[] = []
+
     if (!d) return ['Ocurrió un error desconocido.']
 
     const push = (m: any) => {
       if (!m) return
+
       if (Array.isArray(m)) m.forEach(x => push(x))
       else if (typeof m === 'string') msgs.push(m)
       else {
         try {
           msgs.push(JSON.stringify(m))
-        } catch {
-          /* noop */
-        }
+        } catch {}
       }
     }
 
     push(d?.message ?? d)
+
     return msgs.length ? msgs : ['Ocurrió un error.']
   }
 
-  // cargar lista
+  // Cargar categorías activas para el filtro
+  React.useEffect(() => {
+    if (!token) return
+    let mounted = true
+
+    ;(async () => {
+      setLoadingCats(true)
+
+      try {
+        const res = await listActiveCategories(token, { limit: 1000 })
+
+        if (!mounted) return
+        const items = res.data.map(c => ({ id: String(c.id), descripcion: c.descripcion }))
+
+        setCats(items)
+
+        if (categoriaProyecto && !items.some(i => i.id === String(categoriaProyecto))) {
+          setCategoriaProyecto('')
+        }
+      } catch (e) {
+        console.error('Error cargando categorías para filtro:', e)
+      } finally {
+        if (mounted) setLoadingCats(false)
+      }
+    })()
+
+    return () => {
+      mounted = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
+
+  // cargar lista / o búsqueda por código visual
   const load = React.useCallback(async () => {
     if (!token) return
+    const mySeq = ++reqSeq.current // ⬅️ marca esta ejecución como la más reciente
+
     setLoading(true)
     setDrawerErrors(null)
+
     try {
+      // Si el buscador es un “código visual” (ej. 003), hacemos GET /conceptos/:id
+      if (search && isVisualCode(search)) {
+        const id = visualToId(search.trim())
+
+        try {
+          const one = await getConcept(id, token)
+
+          // Si llegó otra búsqueda después, ignora esta respuesta
+          if (mySeq !== reqSeq.current) return
+
+          const i = one.data
+
+          const single: Concept = {
+            id: i.id,
+            concepto: i.concepto,
+            cuentaContable: i.cuenta_contable,
+            categoriaProyecto: i.categoria_proyecto,
+            categoriaProyectoDesc: i.categoria_proyecto_rel?.descripcion,
+            codigo: i.codigo,
+            estado: i.estado,
+            createdAt: new Date(i.created_at).getTime(),
+            codigoVisual: makeCodigoVisual(i.id)
+          }
+
+          setRows([single])
+          setTotal(1)
+
+          return
+        } catch (_e) {
+          if (mySeq !== reqSeq.current) return
+
+          // 404 u otro error -> sin resultados
+          setRows([])
+          setTotal(0)
+
+          return
+        } finally {
+          if (mySeq === reqSeq.current) setLoading(false)
+        }
+      }
+
+      // Flujo normal (texto libre): pedir listado al backend
       const res = await listConcepts(
         {
           page,
@@ -107,6 +216,8 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
         token
       )
 
+      if (mySeq !== reqSeq.current) return
+
       const mapped: Concept[] = res.data.map(i => ({
         id: i.id,
         concepto: i.concepto,
@@ -115,15 +226,17 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
         categoriaProyectoDesc: i.categoria_proyecto_rel?.descripcion,
         codigo: i.codigo,
         estado: i.estado,
-        createdAt: new Date(i.created_at).getTime()
+        createdAt: new Date(i.created_at).getTime(),
+        codigoVisual: makeCodigoVisual(i.id)
       }))
 
       setRows(mapped)
       setTotal(res.pagination.total)
     } catch (err: any) {
+      if (mySeq !== reqSeq.current) return
       console.error('List concepts error:', err?.detail ?? err)
     } finally {
-      setLoading(false)
+      if (mySeq === reqSeq.current) setLoading(false)
     }
   }, [token, page, pageSize, orderBy, order, estado, search, categoriaProyecto])
 
@@ -131,23 +244,24 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
     load()
   }, [load])
 
-  // crear
+  // crear (sin 'codigo' desde el form)
   const handleCreate = async (payload: {
     concepto: string
     cuenta_contable: string
     categoria_proyecto: string | number
-    codigo: string
     estado: boolean
   }) => {
     if (!token) return
     setDrawerErrors(null)
     setLoading(true)
+
     try {
-      await createConcept(payload, token)
+      await createConcept(payload, token) // no enviamos 'codigo'
       await load()
       setOpen(false)
     } catch (err: any) {
       const msgs = normalizeBackendErrors(err)
+
       setDrawerErrors(msgs)
       console.error('Create concept error:', err?.detail ?? err)
     } finally {
@@ -165,6 +279,7 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
     if (!token || !editing) return
     setDrawerErrors(null)
     setLoading(true)
+
     try {
       await updateConcept(editing.id, payload, token)
       await load()
@@ -173,6 +288,7 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
       setMode('crear')
     } catch (err: any) {
       const msgs = normalizeBackendErrors(err)
+
       setDrawerErrors(msgs)
       console.error('Update concept error:', err?.detail ?? err)
     } finally {
@@ -187,13 +303,16 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
     setDrawerErrors(null)
     setOpen(true)
   }
+
   const onRequestDeleteRow = (row: Concept) => setDeleteTarget(row)
 
   const confirmDelete = async () => {
     if (!token || !deleteTarget) return
     const id = deleteTarget.id
+
     setDeleteTarget(null)
     setLoading(true)
+
     try {
       await deleteConcept(id, id, token)
       await load()
@@ -215,7 +334,7 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
             Conceptos {totalLabel}
           </Typography>
           <Typography variant='body2' color='text.secondary'>
-            Administra los conceptos, su cuenta contable, categoría de proyecto, código y estado.
+            Administra los conceptos, su cuenta contable, categoría de proyecto y estado.
           </Typography>
         </Grid>
       </Grid>
@@ -234,11 +353,11 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
           bgcolor: 'background.paper'
         }}
       >
-        <Grid size={{ xs: 12, md: 5 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <TextField
             fullWidth
             size='small'
-            placeholder='Buscar (por concepto, código, etc.)'
+            placeholder='Buscar (por concepto, código visual 003, etc.)'
             value={search}
             onChange={e => {
               setSearch(e.target.value)
@@ -248,7 +367,8 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        {/* Filtro de categoría funcional */}
+        <Grid size={{ xs: 12, md: 3 }}>
           <FormControl fullWidth size='small'>
             <InputLabel id='cat-proy-label'>Categoría de proyecto</InputLabel>
             <Select
@@ -259,9 +379,29 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
                 setCategoriaProyecto(e.target.value as any)
                 setPage(1)
               }}
+              renderValue={val => {
+                if (!val) return 'Todas'
+                const it = cats.find(c => c.id === String(val))
+
+                return it ? it.descripcion : String(val)
+              }}
+              displayEmpty
             >
-              <MenuItem value=''>Todas</MenuItem>
-              {/* Si quieres opciones reales aquí, podemos reutilizar listActiveCategories con un pequeño hook */}
+              <MenuItem value=''>
+                <em>Todas</em>
+              </MenuItem>
+
+              {loadingCats ? (
+                <MenuItem disabled>
+                  <CircularProgress size={16} sx={{ mr: 1 }} /> Cargando...
+                </MenuItem>
+              ) : (
+                cats.map(c => (
+                  <MenuItem key={c.id} value={c.id}>
+                    {c.descripcion}
+                  </MenuItem>
+                ))
+              )}
             </Select>
           </FormControl>
         </Grid>
@@ -345,10 +485,9 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
                 concepto: editing.concepto || '',
                 cuenta_contable: editing.cuentaContable || '',
                 categoria_proyecto: editing.categoriaProyecto || '',
-                codigo: editing.codigo || '',
                 estado: !!editing.estado
               }
-            : { concepto: '', cuenta_contable: '', categoria_proyecto: '', codigo: '', estado: true }
+            : { concepto: '', cuenta_contable: '', categoria_proyecto: '', estado: true }
         }
         apiErrors={drawerErrors}
         onClose={() => {
@@ -361,8 +500,8 @@ const ConceptosView = ({ initialRows = [] }: Props) => {
           mode === 'editar'
             ? async ({ concepto, cuenta_contable, categoria_proyecto, estado }) =>
                 handleEdit({ concepto, cuenta_contable, categoria_proyecto, estado })
-            : async ({ concepto, cuenta_contable, categoria_proyecto, codigo, estado }) =>
-                handleCreate({ concepto, cuenta_contable, categoria_proyecto, codigo: codigo!, estado })
+            : async ({ concepto, cuenta_contable, categoria_proyecto, estado }) =>
+                handleCreate({ concepto, cuenta_contable, categoria_proyecto, estado })
         }
       />
     </Box>

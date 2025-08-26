@@ -5,5 +5,6 @@ import ConceptosView, { type Concept } from '@views/legalizacion-gastos-y-antici
 
 export default async function Page() {
   const initialRows: Concept[] = [] // placeholder para el primer render
+
   return <ConceptosView initialRows={initialRows} />
 }

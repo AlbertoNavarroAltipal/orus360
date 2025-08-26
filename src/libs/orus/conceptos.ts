@@ -16,7 +16,7 @@ const authHeader = (token: string) => ({
   Authorization: `Bearer ${token}`
 })
 
-/** Errores estándar NestJS que envía tu backend */
+/** Errores estándar NestJS de tu backend */
 export type OrusError = {
   statusCode: number
   timestamp?: string
@@ -98,12 +98,13 @@ export async function getConcept(id: string | number, token: string) {
 }
 
 export async function createConcept(
+  // 👇 codigo es opcional ahora
   payload: {
     concepto: string
     cuenta_contable: string
     categoria_proyecto: string | number
-    codigo: string
     estado: boolean
+    codigo?: string
   },
   token: string
 ) {
@@ -179,16 +180,18 @@ export async function deleteConcept(id: string | number, confirmId: string | num
 }
 
 /** -----------------------
- *  CATEGORÍAS (para el <select>), solo activas
+ *  CATEGORÍAS activas (para el <select>)
  *  ----------------------*/
 export async function listActiveCategories(token: string, opts?: { limit?: number }) {
   const q = new URLSearchParams()
+
+  console.log(opts)
 
   q.set('page', '1')
   q.set('orderBy', 'descripcion')
   q.set('order', 'asc')
   q.set('estado', 'true')
-  q.set('search', '') // como en tu ejemplo
+  q.set('search', '')
 
   const res = await fetch(`${base}/api/categorias-conceptos?${q.toString()}`, {
     method: 'GET',

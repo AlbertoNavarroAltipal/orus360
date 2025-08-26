@@ -18,6 +18,7 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import CircularProgress from '@mui/material/CircularProgress'
 import { useForm, Controller } from 'react-hook-form'
+
 import { listActiveCategories } from '@/libs/orus/conceptos'
 
 type BaseValues = {
@@ -26,29 +27,29 @@ type BaseValues = {
   categoria_proyecto: string | number | ''
   estado: boolean
 }
-type CreateValues = BaseValues & { codigo?: string }
 
 type Props = {
   open: boolean
   token: string
   mode?: 'crear' | 'editar'
-  initialValues?: CreateValues
+  initialValues?: BaseValues
   apiErrors?: string[] | null
   onClose: () => void
-  onSubmit: (payload: CreateValues) => Promise<void> | void
+  onSubmit: (payload: BaseValues) => Promise<void> | void
 }
 
 export default function FormDrawer({
   open,
   token,
   mode = 'crear',
-  initialValues = { concepto: '', cuenta_contable: '', categoria_proyecto: '', codigo: '', estado: true },
+  initialValues = { concepto: '', cuenta_contable: '', categoria_proyecto: '', estado: true },
   apiErrors = null,
   onClose,
   onSubmit
 }: Props) {
   const [submitting, setSubmitting] = React.useState(false)
-  const { control, handleSubmit, reset, setError, clearErrors, getValues, setValue } = useForm<CreateValues>({
+
+  const { control, handleSubmit, reset, setError, clearErrors, getValues, setValue } = useForm<BaseValues>({
     defaultValues: initialValues
   })
 
@@ -66,14 +67,19 @@ export default function FormDrawer({
   React.useEffect(() => {
     if (!open || !token) return
     let mounted = true
+
     ;(async () => {
       setLoadingCats(true)
+
       try {
         const res = await listActiveCategories(token)
+
         if (!mounted) return
         const items = res.data.map(c => ({ id: String(c.id), descripcion: c.descripcion }))
+
         setCats(items)
         const current = String(getValues('categoria_proyecto') ?? '')
+
         if (current && !items.some(i => i.id === current)) {
           setValue('categoria_proyecto', '')
         }
@@ -84,6 +90,7 @@ export default function FormDrawer({
         if (mounted) setLoadingCats(false)
       }
     })()
+
     return () => {
       mounted = false
     }
@@ -101,39 +108,36 @@ export default function FormDrawer({
     lowerList.forEach((msg, idx) => {
       if (includesAny(msg, ['concepto'])) {
         setError('concepto', { type: 'server', message: apiErrors[idx] })
+
         return
       }
-      if (includesAny(msg, ['código', 'codigo'])) {
-        setError('codigo', { type: 'server', message: apiErrors[idx] })
-        return
-      }
+
       if (includesAny(msg, ['cuenta contable', 'cuenta_contable'])) {
         setError('cuenta_contable', { type: 'server', message: apiErrors[idx] })
+
         return
       }
+
       if (includesAny(msg, ['categoría de proyecto', 'categoria de proyecto', 'categoria_proyecto'])) {
         setError('categoria_proyecto', { type: 'server', message: apiErrors[idx] })
+
         return
       }
-      // otros mensajes se quedan en el Alert general
     })
   }, [apiErrors, clearErrors, setError])
 
-  const submit = async (v: CreateValues) => {
+  const submit = async (v: BaseValues) => {
     setSubmitting(true)
+
     try {
       // normalizaciones antes de enviar
-      const payload: any = {
+      const payload: BaseValues = {
         concepto: v.concepto?.trim(),
         cuenta_contable: String(v.cuenta_contable ?? '').trim(),
         categoria_proyecto: v.categoria_proyecto === '' ? '' : String(v.categoria_proyecto),
         estado: !!v.estado
       }
-      if (mode === 'crear') {
-        payload.codigo = String(v.codigo ?? '')
-          .trim()
-          .toUpperCase()
-      }
+
       await onSubmit(payload)
     } finally {
       setSubmitting(false)
@@ -185,36 +189,6 @@ export default function FormDrawer({
             )}
           />
 
-          {isCreate && (
-            <Controller
-              name='codigo'
-              control={control}
-              rules={{
-                required: 'El código es obligatorio',
-                pattern: {
-                  value: /^[A-Z0-9]{1,3}$/,
-                  message: 'Solo MAYÚSCULAS y números (1–3 caracteres)'
-                }
-              }}
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label='Código'
-                  margin='normal'
-                  inputProps={{ maxLength: 3 }}
-                  onChange={e => {
-                    const raw = e.target.value || ''
-                    const next = raw.replace(/\s+/g, '').toUpperCase()
-                    field.onChange(next)
-                  }}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                />
-              )}
-            />
-          )}
-
           <Controller
             name='cuenta_contable'
             control={control}
@@ -250,6 +224,7 @@ export default function FormDrawer({
                   renderValue={val => {
                     if (!val) return ''
                     const item = cats.find(c => c.id === val)
+
                     return item ? `${item.descripcion}` : String(val)
                   }}
                 >
